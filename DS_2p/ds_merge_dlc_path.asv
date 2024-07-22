@@ -1,0 +1,42 @@
+clear all
+% 定义包含CSV文件的文件夹路径
+folderPath = 'G:\BaiduNetdiskDownload\data_2p_1';
+DLC_folder='data_path_DLC'
+newfolderName = 'merged file';
+if exist(fullfile(folderPath,DLC_folder,newfolderName), 'dir') ~= 7
+    mkdir(fullfile(folderPath,DLC_folder,newfolderName));
+    disp(['Folder "', newfolderName, '" created.']);
+end
+% 获取文件夹中所有以filtered结尾的CSV文件
+csvFiles = dir(fullfile(folderPath,, '*filtered.csv'))';
+
+% 获取所有CSV文件的完整路径
+csvFilePaths = fullfile({csvFiles.folder}, {csvFiles.name});
+
+% 提取文件名
+fileNames = {csvFiles.name};
+
+% 提取文件名的第5到第14位字符
+groupIDs = cellfun(@(x) x(5:14), fileNames, 'UniformOutput', false);
+
+% 找到唯一的组ID
+[uniqueGroupIDs, ~, groupIdx] = unique(groupIDs);
+
+
+% 按组读取并合并文件
+animal_path = cell([size(uniqueGroupIDs,2),1]); % 预分配单元数组
+strut_animal_path=struct;
+for id = 1:numel(uniqueGroupIDs)
+    % 读取当前组的所有文件
+    tables = cellfun(@readtable, csvFilePaths(groupIdx == id), 'UniformOutput', false);
+    % 合并表格
+    animal_path{id} = vertcat(tables{:});
+
+    strut_animal_path.(['date_' strrep(uniqueGroupIDs{id}, '-', '_')])=vertcat(tables{:});
+end
+save(fullfile(folderPath,['merged_mice_path_file.mat']),'animal_path','strut_animal_path')
+
+% 保存每个组的合并表格到新的CSV文件
+cellfun(@(table, id) ...
+    writetable(table, fullfile(fullfile(folderPath,newfolderName), ['mergedGroup_' id '.csv'])), ...
+    animal_path, uniqueGroupIDs, 'UniformOutput', false);
