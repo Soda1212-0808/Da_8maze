@@ -10,17 +10,17 @@ smooth_window=10;
 Path = 'H:\CA3_reprocess\each mice\';    % 设置数据存放的文件夹路径
 animals={'DCA3-9','DCA3-10','DCA3-11','DCA3-12','DCA3-14','DCA3-17','DCA3-20'};
 newfolderName = 'PSTH';
-if exist(fullfile(Path,newfolderName), 'dir') ~= 7
-    mkdir(fullfile(Path,newfolderName));
-    disp(['Folder "', newfolderName, '" created.']);
-end
+
 for curr_animal=1:length(animals)
     % 获取文件夹中的所有内容
     animal=animals{curr_animal};
     contents = dir([Path animal]);
     % 获取所有子文件夹的名称
     recording_files = {contents(([contents.isdir] & ~ismember({contents.name}, {'.', '..'}))).name};
-
+if exist(fullfile(Path,animal,newfolderName), 'dir') ~= 7
+    mkdir(fullfile(Path,newfolderName));
+    disp(['Folder "', newfolderName, '" created.']);
+end
     for curr_file=1:2
         %处理event数据
         event_file=dir(fullfile(Path, animal ,recording_files{curr_file} ,'*data_m1.csv'));
@@ -35,7 +35,7 @@ for curr_animal=1:length(animals)
         % 对矩阵进行排序
         data_event_sorted = data_event(sortOrder, :);
         data_event_sorted_correct= data_event_sorted(data_event_sorted(:,2)==1,:);
-        event_times=data_event_sorted(:,7);
+        event_times=data_event_sorted_correct(:,7);
 
 
         neuron_files=dir(fullfile(Path ,animal , recording_files{curr_file} ,'*.t64'));
@@ -84,9 +84,9 @@ for curr_animal=1:length(animals)
             colors = zeros(size(trial_indices, 1), 3);
 
             % 为每种颜色创建逻辑索引
-            idx_{2} = ismember(data_event_sorted(:,1), [26, 62]);
-            idx_{1} = ismember(data_event_sorted(:,1), [17, 71]);
-            idx_{3} = ismember(data_event_sorted(:,1), [35, 53]);
+            idx_{2} = ismember(data_event_sorted_correct(:,1), [26, 62]);
+            idx_{1} = ismember(data_event_sorted_correct(:,1), [17, 71]);
+            idx_{3} = ismember(data_event_sorted_correct(:,1), [35, 53]);
 
             % 找到匹配的trial_indices
             idx_trial_2 = ismember(trial_indices, find( idx_{2}));
@@ -120,9 +120,6 @@ for curr_animal=1:length(animals)
             title('Peri-Event Time Histogram with Firing Rate');
             xlim(psth_window);
             sgtitle([ animal '-day-' num2str(curr_file) ' ' spike_name ])
-
-
-
 
            saveas(gcf, fullfile(Path,newfolderName,[ animal  '_day_' num2str(curr_file) spike_name '_PSTH.jpg']),'jpg')
             close all
