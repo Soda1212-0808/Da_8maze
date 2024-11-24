@@ -1,6 +1,6 @@
 clear all
 
-Path = 'G:\BaiduNetdiskDownload\data_2p_1\merged file';
+Path = 'D:\SDdata\data_2p_1\1464\merged file';
 
 files=dir(fullfile(Path,'*.mat'))
 load(fullfile(files(1).folder,files(1).name))
@@ -22,7 +22,7 @@ X=cell2mat(currdata(:,8))+100;
 Y=cell2mat(currdata(:,9))+100;
 
 
-folderPath = 'G:\BaiduNetdiskDownload\data_2p_1\data_path_DLC';
+folderPath = 'D:\SDdata\data_2p_1\1464\data_path_DLC';
 mp4Files=dir(fullfile(folderPath, '*.mp4'));
 
 currindx=  find(contains({mp4Files.name},  strrep(dateFields{1}(6:end), '_', '-')),1);

@@ -1,6 +1,6 @@
 clear all
 % 定义包含CSV文件的文件夹路径
-Path = 'G:\BaiduNetdiskDownload\data_2p_1';
+Path = 'D:\SDdata\data_2p_1';
 DLC_folder='data_path_DLC';
 newfolderName = 'merged file';
 if exist(fullfile(Path,newfolderName), 'dir') ~= 7

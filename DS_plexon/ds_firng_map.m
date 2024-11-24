@@ -1,23 +1,25 @@
 clear all
 
-% Path = 'H:\CA3_reprocess\each mice';    % 设置数据存放的文件夹路径
-% animals={'DCA3-9','DCA3-10','DCA3-11','DCA3-12','DCA3-14','DCA3-17','DCA3-20'};
+Path = 'H:\CA3_reprocess\each mice';    % 设置数据存放的文件夹路径
+animals={'DCA3-9','DCA3-10','DCA3-11','DCA3-12','DCA3-14','DCA3-17','DCA3-20'};
 
-Path = 'H:\CA1_8Maze';    % 设置数据存放的文件夹路径
-animals={'CA1-9'};
+% Path = 'H:\CA1_8Maze';    % 设置数据存放的文件夹路径
+% animals={'CA1-9'};
 
-% for curr_animal=1:length(animals)
+for curr_animal=1:length(animals)
 % 获取文件夹中的所有内容
-animal='CA1-9';
+% animal='CA1-9';
+animal=animals{curr_animal};
 contents = dir(fullfile(Path ,animal));
 % 获取所有子文件夹的名称
 recording_files = {contents(([contents.isdir] & ~ismember({contents.name}, {'.', '..'}))).name};
-curr_file=1
+
+curr_file=1;
 % curr_file=1:length(recording_files)
 
 %%
 bufferfolderName = 'bufferFile';
-if exist(fullfile(Path, animal , recording_files{curr_file},bufferfolderName), 'dir') ~= 7
+if exist(fullfile(Path, animal , recording_files{curr_file},bufferfolderName)) ~= 7
     mkdir(fullfile(Path, animal , recording_files{curr_file},bufferfolderName));
     disp(['Folder "', bufferfolderName, '" created.']);
 end
@@ -37,6 +39,7 @@ wv_files=dir(fullfile(Path, animal , recording_files{curr_file} ,'*wv.mat'));
 curr_csv=dir(fullfile(Path,animal,recording_files{curr_file},'*.csv'));
 
 data_path=readtable(fullfile(curr_csv.folder,curr_csv.name));
+
 data_path.time=(data_path.scorer+1)/framerate;
 
 spike_whole = arrayfun(@(f) readmclusttfile(fullfile(f.folder, f.name))'/10000, ...
@@ -69,7 +72,7 @@ wv_distances = arrayfun(@(i) calcDistance(spike_wv{i}, maxDiffCols(i)), 1:numel(
 %% 前处理迷宫轨迹采集错误的数据
 X=table2array(data_path(:,2))+100;
 Y=table2array(data_path(:,9))+100;
-% plot(X,Y)
+ plot(X,Y)
 
 % v.NumFrames
 % 读取第一帧
@@ -83,7 +86,7 @@ paddedFrame = uint8(255 * ones(newRows, newCols, channels)); % 白色背景
 paddedFrame(101:100+rows, 101:100+cols, :) = firstFrame;
 
 %% 若之前未绘制目标区域并保存文件，在轨迹图像上绘制目标区域
-if exist(fullfile(Path, animal , recording_files{curr_file},bufferfolderName,'grab_picture.jpg'), 'dir')
+if ~exist(fullfile(Path, animal , recording_files{curr_file},bufferfolderName,'grab_picture.jpg'), 'file')
 display_next_frame_on_scroll(mp4FilePaths{1})
 
 figure;
@@ -201,7 +204,7 @@ for curr_cell=1:length(spike_whole)
     % 识别发放场
     threshold = 1.5 * mean_rate; % 设置阈值为平均发放速率的两倍
     firing_field = rate_map > threshold;
-smoothed_rate_map=flipud(smoothed_rate_map);
+    smoothed_rate_map=flipud(smoothed_rate_map);
     nexttile(curr_cell);
     imagesc(x_edges, y_edges, smoothed_rate_map); axis image off;
     clim([0 nanmax(smoothed_rate_map(:))])
@@ -219,5 +222,5 @@ saveas(gcf, fullfile(Path,[ animal '_day_' num2str(curr_file) 'rate_map.jpg']),'
 
 
 
-
+end
 
