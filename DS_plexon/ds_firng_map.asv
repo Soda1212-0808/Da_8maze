@@ -177,20 +177,17 @@ data_path.time=(data_path.scorer+1-recordedFrameCount)/framerate;
 
 position_time= data_path.time(recordedFrameCount:end);
 
-inIntervals = any(position_time >= (table2array(data_event( :,4))-0)' & position_time <= table2array(data_event(:,5))', 2);
-% inIntervals=(position_time>0);
+inIntervals = any(position_time >= table2array(data_event( :,3))' & position_time <= table2array(data_event(:,5))', 2);
 
-position_time2=position_time(inIntervals);
-X_filter_speed2=X_filter_speed(inIntervals);
-Y_filter_speed2=Y_filter_speed(inIntervals);
 
 frame_sampling_rate=30;
 % 定义网格的边界和分辨率
-x_edges = min(X_filter_speed2):bin_size:max(X_filter_speed2);
-y_edges = min(Y_filter_speed2):bin_size:max(Y_filter_speed2);
+x_edges = min(X_filter_speed_2
+):bin_size:max(X_filter_speed);
+y_edges = min(Y_filter_speed):bin_size:max(Y_filter_speed);
 
 % 计算占用直方图
-occupancy_map = histcounts2(X_filter_speed2, Y_filter_speed2, x_edges, y_edges);
+occupancy_map = histcounts2(X_filter_speed, Y_filter_speed, x_edges, y_edges);
 % 计算占用时间（假设位置数据的采样率为 position_sampling_rate）
 occupancy_time = occupancy_map * (1 / frame_sampling_rate);
 
@@ -199,8 +196,8 @@ colormap('jet')
 for curr_cell=1:length(spike_whole)
     spike_times=spike_whole{curr_cell};
     % 获取每个发放事件对应的位置索引
-    spike_x = interp1(position_time2, X_filter_speed2, spike_times);
-    spike_y = interp1(position_time2, Y_filter_speed2, spike_times);
+    spike_x = interp1(position_time, X_filter_speed, spike_times);
+    spike_y = interp1(position_time, Y_filter_speed, spike_times);
 
     % 计算发放直方图
     spike_map = histcounts2(spike_x, spike_y, x_edges, y_edges);
