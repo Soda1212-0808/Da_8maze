@@ -35,7 +35,10 @@ for curr_animal=1:length(animals)
         % 对矩阵进行排序
         data_event_sorted = data_event(sortOrder, :);
         data_event_sorted_correct= data_event_sorted(data_event_sorted(:,2)==1,:);
-        event_times=data_event_sorted(:,7);
+        
+        
+        event_times{1}=data_event_sorted(:,3);
+        event_times{2}=data_event_sorted(:,7);
 
 
         neuron_files=dir(fullfile(Path ,animal , recording_files{curr_file} ,'*.t64'));
@@ -49,54 +52,60 @@ for curr_animal=1:length(animals)
             all_counts = histcounts(spike_times, min(spike_times):bin_size:max(spike_times));
             mean_counts=mean(all_counts);
             sem_counts=std(all_counts);
-
-
             psth_bins = psth_window(1):bin_size:psth_window(2); % 直方图的边界
 
 
+
+stim_bins=cell(1:length(event_times));
+trial_indices=cell(1:length(event_times));
+bin_counts=cell(1:length(event_times));
+for curr_event=1:length(event_times)
             % 使用 bsxfun 快速计算对齐的放电时间
-            aligned_spike_times = bsxfun(@minus, spike_times, event_times');
+            aligned_spike_times = bsxfun(@minus, spike_times, event_times{curr_event}');
             % 将对齐的放电时间限制在事件窗口内
             valid_spikes = aligned_spike_times(aligned_spike_times >= psth_window(1) & aligned_spike_times <= psth_window(2));
             % 为 raster 图准备数据
-            [~,trial_indices ] = find(aligned_spike_times >= psth_window(1) & aligned_spike_times <= psth_window(2));
+            [~,trial_indices{curr_event} ] = find(aligned_spike_times >= psth_window(1) & aligned_spike_times <= psth_window(2));
             %         % 计算每个 bin 内的放电次数
             %         bin_counts = histcounts(valid_spikes, psth_bins);
             %         bin_zscore=(bin_counts-mean_counts)/sem_counts;
             %         % 计算放电率
             %         firing_rate = bin_counts / (bin_size * length(event_times)); % 归一化为放电率（单位：Hz）
-            stim_bins= event_times+ psth_bins;
-            bin_counts = cell2mat(arrayfun(@(x) histcounts(spike_times, stim_bins(x,:)), (1:length(event_times))', 'UniformOutput', false));
-            firing_rate=mean(bin_counts,1)/bin_size;
-            firing_zscore=(mean(bin_counts,1)-mean_counts)/sem_counts;
-
+            stim_bins{curr_event}= event_times{curr_event}+ psth_bins;
+            bin_counts{curr_event} = cell2mat(arrayfun(@(x) histcounts(spike_times, stim_bins{curr_event}(x,:)), (1:length(event_times{curr_event}))', 'UniformOutput', false));
+%             firing_rate=mean(bin_counts,1)/bin_size;
+%             firing_zscore=(mean(bin_counts,1)-mean_counts)/sem_counts;
+end
 
             %% 创建一个新图，放电率直方图
             figure;
+            figure('Position',[50 100 length(event_times)*100 400]);
+            tt = tiledlayout(1,length(event_times),'TileSpacing','tight');
+            title(tt,[ animal '-day-' num2str(curr_file) ' ' spike_name ])
+            
             % 绘制 raster 图
+for curr_figure=1:length(event_times)
+     t_animal = tiledlayout(tt,2,1);
+    t_animal.Layout.Tile = curr_figure;
+    title(t_animal,animal);
 
-            nexttile;
-            colors_list = [0, 0, 0;    % 红色
-                1, 0, 0;    % 蓝色
-                0, 0, 1];   % 绿色
+            nexttile();
+            colors_list = [0, 0, 0; 0.5, 0.5, 0.5;   % 红色
+                1, 0, 0;  1, 0.5, 0.5;    % 蓝色
+                0, 0, 1;0.5, 0.5, 1];   % 绿色
 
             % 初始化颜色数组
             colors = zeros(size(trial_indices, 1), 3);
-
+            event_name=[26 62 17 71 35 53];
             % 为每种event创建逻辑索引
-            idx_{2} = ismember(data_event_sorted(:,1), [26, 62]);
-            idx_{1} = ismember(data_event_sorted(:,1), [17, 71]);
-            idx_{3} = ismember(data_event_sorted(:,1), [35, 53]);
+            for curr_arm=1:6
+                idx_{curr_arm} = ismember(data_event_sorted(:,1), event_name(curr_arm));
+                % 找到匹配的trial_indices
+                idx_trial{event_name} = ismember(trial_indices, find( idx_{curr_arm} ));
+                % 分配颜色
+                colors(idx_trial{event_name}, :) = repmat(colors_list(curr_arm, :), sum(idx_trial{event_name}), 1);
+            end
 
-            % 找到匹配的trial_indices
-            idx_trial_2 = ismember(trial_indices, find( idx_{2}));
-            idx_trial_1 = ismember(trial_indices, find( idx_{1}));
-            idx_trial_3 = ismember(trial_indices, find( idx_{3}));
-
-            % 分配颜色
-            colors(idx_trial_2, :) = repmat(colors_list(1, :), sum(idx_trial_2), 1);
-            colors(idx_trial_1, :) = repmat(colors_list(2, :), sum(idx_trial_1), 1);
-            colors(idx_trial_3, :) = repmat(colors_list(3, :), sum(idx_trial_3), 1);
             % 绘制散点图
             scatter(valid_spikes, trial_indices, 5, colors, 'filled');
             %         scatter(valid_spikes, trial_indices, 10, 'k', 'filled');
@@ -109,17 +118,15 @@ for curr_animal=1:length(animals)
 
             nexttile;
             hold on
-            plot(psth_bins(1:end-1),smoothdata((mean(bin_counts(idx_{2},: ),1)-mean_counts)/sem_counts,'gaussian',smooth_window),'LineWidth',2,'color', colors_list(1,:))
-            plot(psth_bins(1:end-1),smoothdata((mean(bin_counts(idx_{1} ,:),1)-mean_counts)/sem_counts,'gaussian',smooth_window),'LineWidth',2,'color', colors_list(2,:))
-            plot(psth_bins(1:end-1),smoothdata((mean(bin_counts(idx_{3} ,:),1)-mean_counts)/sem_counts,'gaussian',smooth_window),'LineWidth',2,'color', colors_list(3,:))
-
+            arrayfun(@(x) plot(psth_bins(1:end-1),smoothdata((mean(bin_counts(idx_{x},: ),1)-mean_counts)/sem_counts,'gaussian',smooth_window),'LineWidth',2,'color', colors_list(x,:)),1:6)
+          
             % bar(edges(1:end-1) + bin_size/2, bin_zscore, 'histc');
             xlabel('Time (s)');
             %         ylabel('Firing Rate (Hz)');
             ylabel('zscore');
             title('Peri-Event Time Histogram with Firing Rate');
             xlim(psth_window);
-            sgtitle([ animal '-day-' num2str(curr_file) ' ' spike_name ])
+%             sgtitle([ animal '-day-' num2str(curr_file) ' ' spike_name ])
 
 
 

@@ -14,6 +14,7 @@ contents = dir(fullfile(Path ,animal));
 % 获取所有子文件夹的名称
 recording_files = {contents(([contents.isdir] & ~ismember({contents.name}, {'.', '..'}))).name};
 
+%选择文件
 curr_file=1;
 % curr_file=1:length(recording_files)
 
