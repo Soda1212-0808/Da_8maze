@@ -6,8 +6,8 @@ psth_window = [-5,5];
 % 设置直方图参数
 bin_size = 0.05; % 直方图的bin大小（单位：秒）
 smooth_window=10;
-Path='E:\data_8_maze\CA3_reprocess\each mice\'
-% Path = 'H:\CA3_reprocess\each mice\';    % 设置数据存放的文件夹路径
+% Path='E:\data_8_maze\CA3_reprocess\each mice\'
+Path = 'H:\CA3_reprocess\each mice\';    % 设置数据存放的文件夹路径
 animals={'DCA3-9','DCA3-10','DCA3-11','DCA3-12','DCA3-14','DCA3-17','DCA3-20'};
 newfolderName = 'PSTH';
 if exist(fullfile(Path,newfolderName), 'dir') ~= 7
@@ -141,4 +141,6 @@ for curr_animal=1:length(animals)
             close all
         end
     end
+
+
 end

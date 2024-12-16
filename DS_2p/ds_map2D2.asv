@@ -35,7 +35,7 @@ endIndices = cumsum(cut_edge);                    % 结束列索引
 subMatrices_imaging = arrayfun(@(s, e) data_imaging.spks(:, s:e), startIndices, endIndices, 'UniformOutput', false);
 
 
-curr_day=4
+curr_day=2
 
 match_id=all_data_match.animal_match_table.(file_name{curr_day});
 data_path=all_data_path.cell_animal_path{curr_day}(cell2mat(match_id(:,3)),:);
@@ -50,7 +50,7 @@ Y=table2array(data_path(:,9))+100;
 mp4Files=dir(fullfile(Path, animal ,'data_path_DLC' ,'*.mp4'));
 mp4FilePaths=fullfile({mp4Files.folder}, {mp4Files.name});
 % 创建一个 VideoReader 对象
-v = VideoReader(mp4FilePaths{40});
+v = VideoReader(mp4FilePaths{1});
 framerate=v.framerate;
 
 % 读取第一帧
@@ -66,7 +66,7 @@ paddedFrame(101:100+rows, 101:100+cols, :) = firstFrame;
 
 %% 若之前未绘制目标区域并保存文件，在轨迹图像上绘制目标区域
 if exist(fullfile(Path, animal , bufferfolderName,'grab_picture.mat'))~=2
-display_next_frame_on_scroll(mp4FilePaths{40})
+display_next_frame_on_scroll(mp4FilePaths{1})
 
 figure;
 % 显示填充后的第一帧
@@ -184,7 +184,7 @@ for curr_cell=1:size(data_imgaing_curr,1)
 %     modified_string = strrep(neuron_files(curr_cell).name(1:end-4), '_', '-');
 % 
 %     title([modified_string ': ' formatted_value 'Hz'])
-title(num2str(curr_cell))
+title
  drawnow
 end
 

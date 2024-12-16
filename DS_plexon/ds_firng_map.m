@@ -178,8 +178,8 @@ data_path.time=(data_path.scorer+1-recordedFrameCount)/framerate;
 
 position_time= data_path.time(recordedFrameCount:end);
 
-inIntervals = any(position_time >= (table2array(data_event( :,4))-0)' & position_time <= table2array(data_event(:,5))', 2);
-% inIntervals=(position_time>0);
+% inIntervals = any(position_time >= (table2array(data_event( :,4))-0)' & position_time <= table2array(data_event(:,5))', 2);
+inIntervals=(position_time>0);
 
 position_time2=position_time(inIntervals);
 X_filter_speed2=X_filter_speed(inIntervals);
