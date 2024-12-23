@@ -1,6 +1,6 @@
 clear all
 % 设置主文件夹路径
-Path = 'D:\SDdata\data_2p_1';
+Path = 'E:\data_8_maze\data_2p_1\1464';
 data_2p_folder='data_2p_cell';
 newfolderName = 'merged file';
 if exist(fullfile(Path,newfolderName), 'dir') ~= 7

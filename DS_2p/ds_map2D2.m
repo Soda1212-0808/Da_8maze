@@ -24,6 +24,8 @@ all_data_match=load(fullfile(Path,animal,'merged file','merged_mice_cell_timepoi
 file_name=fieldnames(all_data_match.animal_match_table);
 lengths = structfun(@(f)  size(f,1)    ,all_data_match.animal_match_table, 'UniformOutput', false);
 cut_edge=cell2mat(struct2cell(lengths));
+
+%仅针对1464
 cut_edge(end)=cut_edge(end)-1;
 
 
@@ -34,10 +36,10 @@ endIndices = cumsum(cut_edge);                    % 结束列索引
 % 使用数组操作生成子矩阵的 cell 数组
 subMatrices_imaging = arrayfun(@(s, e) data_imaging.spks(:, s:e), startIndices, endIndices, 'UniformOutput', false);
 
-data_imgaing_all=cell(4,1);
-data_path=cell(4,1);
+data_imgaing_all=cell(5,1);
+data_path=cell(5,1);
 day_name={'day 0','day 1','day 2','day 3','day 4'};
-for curr_day=1:4
+for curr_day=1:5
 % curr_day=4
 
 match_id=all_data_match.animal_match_table.(file_name{curr_day});
@@ -72,7 +74,7 @@ paddedFrame(101:100+rows, 101:100+cols, :) = firstFrame;
 
 % 若之前未绘制目标区域并保存文件，在轨迹图像上绘制目标区域
 if exist(fullfile(Path, animal , bufferfolderName,'grab_picture.mat'))~=2
-display_next_frame_on_scroll(mp4FilePaths{40})
+display_next_frame_on_scroll(mp4FilePaths{1})
 
 figure;
 % 显示填充后的第一帧
@@ -212,9 +214,9 @@ for curr_cell=1:size(data_imgaing_all{1},1)
     colorbar
     sgtitle([ animal '-neuron-' num2str(curr_cell) ])
 
+saveas(gcf, fullfile(Path,[ animal '\buffer_image\' animal 'neuron' num2str(curr_cell) 'rate_map.jpg']),'jpg')
 
 end
-saveas(gcf, fullfile(Path,[ animal '_day_' num2str(curr_file) 'rate_map.jpg']),'jpg')
 % close all
 
 
