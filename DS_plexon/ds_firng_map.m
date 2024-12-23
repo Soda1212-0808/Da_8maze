@@ -33,14 +33,17 @@ mp4FilePaths=fullfile({mp4Files.folder}, {mp4Files.name});
 v = VideoReader(mp4FilePaths{1});
 framerate=v.framerate;
 
+
+
 neuron_files=dir(fullfile(Path, animal , recording_files{curr_file} ,'*.t64'));
+
 wv_files=dir(fullfile(Path, animal , recording_files{curr_file} ,'*wv.mat'));
 
 % curr_csv=dir(fullfile(Path,animal,recording_files{curr_file},'*filtered.csv'));
 curr_csv=dir(fullfile(Path,animal,recording_files{curr_file},'*.csv'));
 
 data_path=readtable([Path '\' animal '\' recording_files{curr_file} '\' recording_files{curr_file} '-' animal 'DLC_resnet50_old-mazeJul21shuffle1_100000_filtered.csv']);
-data_event=readtable([Path '\' animal '\' recording_files{curr_file} '\' recording_files{curr_file} '-' animal '-01Dat_data_m1.csv']);
+ data_event=readtable([Path '\' animal '\' recording_files{curr_file} '\' recording_files{curr_file} '-' animal '-01Dat_data_m1.csv']);
 
 data_path.time=(data_path.scorer+1)/framerate;
 
@@ -141,7 +144,7 @@ X_interp(invalid_indices) = NaN;
 Y_interp(invalid_indices) = NaN;
 
 
-%%
+%% 绘制 firing field
 window_size = 5;
 
 distances_X = abs(X_interp - movmean(X_interp, [window_size window_size], 'omitnan'));
@@ -173,7 +176,7 @@ Y_filter_speed=Y_interp; Y_filter_speed(speed<0.5)=NaN;
 % Y_interp = imgaussfilt(Y_interp, sigma);
 
 %%网格分辨率
-bin_size=10;
+bin_size=8;
 data_path.time=(data_path.scorer+1-recordedFrameCount)/framerate;
 
 position_time= data_path.time(recordedFrameCount:end);
