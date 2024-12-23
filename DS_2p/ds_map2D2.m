@@ -2,7 +2,7 @@ clear all
 % 定义包含CSV文件的文件夹路径
 
 
-Path = 'D:\SDdata\data_2p_1';    % 设置数据存放的文件夹路径
+Path = 'E:\data_8_maze\data_2p_1';    % 设置数据存放的文件夹路径
 animals={'1464'};
 animal='1464';
 contents = dir(fullfile(Path ,animal));
@@ -34,17 +34,23 @@ endIndices = cumsum(cut_edge);                    % 结束列索引
 % 使用数组操作生成子矩阵的 cell 数组
 subMatrices_imaging = arrayfun(@(s, e) data_imaging.spks(:, s:e), startIndices, endIndices, 'UniformOutput', false);
 
-
-curr_day=4
+data_imgaing_all=cell(4,1);
+data_path=cell(4,1);
+day_name={'day 0','day 1','day 2','day 3','day 4'};
+for curr_day=1:4
+% curr_day=4
 
 match_id=all_data_match.animal_match_table.(file_name{curr_day});
-data_path=all_data_path.cell_animal_path{curr_day}(cell2mat(match_id(:,3)),:);
-data_imgaing_curr=subMatrices_imaging{curr_day};
-
-
+data_path{curr_day}=all_data_path.cell_animal_path{curr_day}(cell2mat(match_id(:,3)),:);
+data_imgaing_all{curr_day}=subMatrices_imaging{curr_day};
+end
 %% 前处理迷宫轨迹采集错误的数据
-X=table2array(data_path(:,2))+100;
-Y=table2array(data_path(:,9))+100;
+% X=table2array(data_path(:,2))+100;
+% Y=table2array(data_path(:,9))+100;
+
+X_position=cellfun(@(x)table2array(x(:,2))+100,data_path,'UniformOutput',false);
+Y_position=cellfun(@(x)table2array(x(:,9))+100,data_path,'UniformOutput',false);
+
 
 %获取MP4文件
 mp4Files=dir(fullfile(Path, animal ,'data_path_DLC' ,'*.mp4'));
@@ -64,7 +70,7 @@ paddedFrame = uint8(255 * ones(newRows, newCols, channels)); % 白色背景
 paddedFrame(101:100+rows, 101:100+cols, :) = firstFrame;
 
 
-%% 若之前未绘制目标区域并保存文件，在轨迹图像上绘制目标区域
+% 若之前未绘制目标区域并保存文件，在轨迹图像上绘制目标区域
 if exist(fullfile(Path, animal , bufferfolderName,'grab_picture.mat'))~=2
 display_next_frame_on_scroll(mp4FilePaths{40})
 
@@ -72,11 +78,11 @@ figure;
 % 显示填充后的第一帧
 imshow(paddedFrame);
 hold on
-scatter(X,Y)
+cellfun(@(x,y) scatter(x,y),X_position,Y_position,'UniformOutput',false)
 % plot(X,Y)
 % mask=roipoly;
 % 指定需要绘制的多边形区域数量
-numPolygons = 7; % 你可以根据需要改变此值
+numPolygons = 9; % 你可以根据需要改变此值
 BW1=cell(1,numPolygons );
 for k = 1:numPolygons
     % 绘制多边形区域
@@ -100,37 +106,35 @@ save(fullfile(Path, animal , bufferfolderName,'grab_picture.mat'),'BW1','-mat')
 else
 load(fullfile(Path, animal ,bufferfolderName,'grab_picture.mat'))
 end
-
-
-X_interp=X;
-Y_interp=Y;
+%%
+X_filter_speed_all=cell(length(X_position),1);
+Y_filter_speed_all=cell(length(X_position),1);
+occupancy_time_all=cell(length(X_position),1);
+x_edges=cell(length(X_position),1);
+y_edges=cell(length(X_position),1);
+for curr_day=1:length(X_position)
+X_interp=X_position{curr_day};
+Y_interp=Y_position{curr_day};
 % 找到 mask 中对应位置为 0 的索引
 mask=BW1{1};
 invalid_indices = mask(sub2ind(size(mask), fix(Y_interp+1), fix(X_interp+1))) == 0;
 % 将对应的 X_interp 和 Y_interp 位置设为 NaN
 X_interp(invalid_indices) = NaN;
 Y_interp(invalid_indices) = NaN;
-
 window_size = 5;
-
 distances_X = abs(X_interp - movmean(X_interp, [window_size window_size], 'omitnan'));
 distances_Y = abs(Y_interp - movmean(Y_interp, [window_size window_size], 'omitnan'));
-
 % 计算欧几里得距离
 distances = sqrt(distances_X.^2 + distances_Y.^2);
-
 figure;
 plot(distances)
 threshold=40;
 errors = distances > threshold;
 X_interp(errors)=NaN;
 Y_interp(errors)=NaN;
-
 figure;
-plot(X_interp,Y_interp);
-
+plot(X_interp,Y_interp);xlim([0 1200]);ylim([0 1200]);
 speed = [0 ;sqrt(diff(X_interp).^2 + diff(X_interp).^2)];
-
 X_filter_speed=X_interp; X_filter_speed(speed<0.5)=NaN;
 Y_filter_speed=Y_interp; Y_filter_speed(speed<0.5)=NaN;
 
@@ -141,56 +145,75 @@ bin_size=10;
 % position_time= data_path.time;
 frame_sampling_rate=30;
 % 定义网格的边界和分辨率
-x_edges = min(X_filter_speed):bin_size:max(X_filter_speed);
-y_edges = min(Y_filter_speed):bin_size:max(Y_filter_speed);
+% x_edges{curr_day} = min(X_filter_speed):bin_size:max(X_filter_speed);
+% y_edges{curr_day} = min(Y_filter_speed):bin_size:max(Y_filter_speed);
+x_edges{curr_day} = 0:bin_size:1200;
+y_edges{curr_day} = 0:bin_size:1200;
 
 % 计算占用直方图
-occupancy_map = histcounts2(X_filter_speed, Y_filter_speed, x_edges, y_edges);
+occupancy_map = histcounts2(X_filter_speed, Y_filter_speed, x_edges{curr_day}, y_edges{curr_day});
 % 计算占用时间（假设位置数据的采样率为 position_sampling_rate）
 occupancy_time = occupancy_map * (1 / frame_sampling_rate);
 
-figure('Position',[50 50 1600 800]);
-colormap('jet')
-for curr_cell=1:size(data_imgaing_curr,1)
-    spike_times=data_imgaing_curr(curr_cell,:)';
-    % 获取每个发放事件对应的位置索引
-    spike_x = X_filter_speed(spike_times>50);
-    spike_y = Y_filter_speed(spike_times>50);
-
-    % 计算发放直方图
-    spike_map = histcounts2(spike_x, spike_y, x_edges, y_edges);
-    % 计算发放速率地图
-    rate_map = spike_map ./ occupancy_time;
-    rate_map(isnan(rate_map)) = 0; % 将NaN值（由于0占用时间导致的）设为0
-    rate_map(isinf(rate_map)) = 0; % 将NaN值（由于0占用时间导致的）设为0
-
-    smooth_sigma = 2; % 根据需要调整
-    % 对发放速率地图进行高斯平滑
-    smoothed_rate_map = imgaussfilt(rate_map, smooth_sigma);
-
-    % 计算平均发放速率
-
-    mean_rate = mean(rate_map(rate_map>0));
-    % 识别发放场
-    threshold = 1.5 * mean_rate; % 设置阈值为平均发放速率的两倍
-    firing_field = rate_map > threshold;
-    smoothed_rate_map=flipud(smoothed_rate_map);
-    nexttile(curr_cell);
-
-    imagesc(x_edges, y_edges, smoothed_rate_map); axis image off;
-    clim([0 nanmax(smoothed_rate_map(:))])
-%     colorbar
-%     formatted_value = sprintf('%.1f', round(spike_freq(curr_cell),1));
-%     modified_string = strrep(neuron_files(curr_cell).name(1:end-4), '_', '-');
-% 
-%     title([modified_string ': ' formatted_value 'Hz'])
-title(num2str(curr_cell))
- drawnow
+X_filter_speed_all{curr_day}=X_filter_speed;
+Y_filter_speed_all{curr_day}=Y_filter_speed;
+occupancy_time_all{curr_day}=occupancy_time;
 end
 
 
-sgtitle([ animal '-day-' num2str(curr_file) ])
 
+for curr_cell=1:size(data_imgaing_all{1},1)
+
+    figure('Position',[50 50 800 200]);
+    colormap('jet')
+    for curr_day=1:length(data_imgaing_all)
+        spike_times=data_imgaing_all{curr_day}(curr_cell,:)';
+        % 获取每个发放事件对应的位置索引
+        spike_x{curr_day} = X_filter_speed_all{curr_day}(spike_times>50);
+        spike_y{curr_day} = Y_filter_speed_all{curr_day}(spike_times>50);
+
+        % 计算发放直方图
+        spike_map{curr_day} = histcounts2(spike_x{curr_day}, spike_y{curr_day}, x_edges{curr_day}, y_edges{curr_day});
+        % 计算发放速率地图
+        rate_map{curr_day} = spike_map{curr_day} ./ occupancy_time_all{curr_day};
+        rate_map{curr_day}(isnan(rate_map{curr_day})) = 0; % 将NaN值（由于0占用时间导致的）设为0
+        rate_map{curr_day}(isinf(rate_map{curr_day})) = 0; % 将NaN值（由于0占用时间导致的）设为0
+
+        smooth_sigma = 2; % 根据需要调整
+        % 对发放速率地图进行高斯平滑
+        rate_map_smoothed{curr_day} = imgaussfilt(rate_map{curr_day}, smooth_sigma);
+
+        % 计算平均发放速率
+
+        mean_rate{curr_day} = mean(rate_map{curr_day}(rate_map{curr_day}>0));
+        % 识别发放场
+        threshold = 1.5 * mean_rate{curr_day}; % 设置阈值为平均发放速率的两倍
+        firing_field{curr_day} = rate_map{curr_day} > threshold;
+        %%是否反转图像
+        %     smoothed_rate_map=flipud(smoothed_rate_map);
+        rate_map_smoothed{curr_day}=rate_map_smoothed{curr_day};
+
+        nexttile(curr_day);
+
+        imagesc(x_edges{curr_day}, y_edges{curr_day}, rate_map_smoothed{curr_day});
+        axis image off;
+        clim([0 max(rate_map_smoothed{1}(:))])
+        xlim([0 1200]);     ylim([0 1200]);
+
+        %     colorbar
+        %     formatted_value = sprintf('%.1f', round(spike_freq(curr_cell),1));
+        %     modified_string = strrep(neuron_files(curr_cell).name(1:end-4), '_', '-');
+        %
+        %     title([modified_string ': ' formatted_value 'Hz'])
+        title(day_name{curr_day})
+        drawnow
+    end
+
+    colorbar
+    sgtitle([ animal '-neuron-' num2str(curr_cell) ])
+
+
+end
 saveas(gcf, fullfile(Path,[ animal '_day_' num2str(curr_file) 'rate_map.jpg']),'jpg')
 % close all
 

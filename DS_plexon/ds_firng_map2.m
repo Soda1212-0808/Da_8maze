@@ -38,8 +38,7 @@ wv_files=dir(fullfile(Path, animal , recording_files{curr_file} ,'*wv.mat'));
 
 % curr_csv=dir(fullfile(Path,animal,recording_files{curr_file},'*filtered.csv'));
 curr_csv=dir(fullfile(Path,animal,recording_files{curr_file},'*.csv'));
-data_path=readtable([Path '\' animal '\' recording_files{curr_file} '\' recording_files{curr_file} '-' animal 'DLC_resnet50_old-mazeJul21shuffle1_100000_filtered.csv']);
-
+data_path=readtable([curr_csv(1).folder '\' curr_csv(6).name])
 data_path=readtable([Path '\' animal '\' recording_files{curr_file} '\' recording_files{curr_file} '-' animal 'DLC_resnet50_old-mazeJul21shuffle1_100000_filtered.csv']);
 data_event=readtable([Path '\' animal '\' recording_files{curr_file} '\' recording_files{curr_file} '-' animal '-01Dat_data_m1.csv']);
 

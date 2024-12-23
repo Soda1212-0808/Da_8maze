@@ -60,10 +60,10 @@ for curr_animal=1:length(animals)
 
 
 
-            stim_bins=cell(1:length(event_times));
-            trial_indices=cell(1:length(event_times));
-            bin_counts=cell(1:length(event_times));
-            valid_spikes=cell(1:length(event_times));
+            stim_bins=cell(1,length(event_times));
+            trial_indices=cell(1,length(event_times));
+            bin_counts=cell(1,length(event_times));
+            valid_spikes=cell(1,length(event_times));
             for curr_event=1:length(event_times)
                 % 使用 bsxfun 快速计算对齐的放电时间
                 aligned_spike_times = bsxfun(@minus, spike_times, event_times{curr_event}');
@@ -141,9 +141,19 @@ for curr_animal=1:length(animals)
             close all
         end
     
-     for curr_cell=1:length(spike_whole)
-     spike_times=spike_whole{curr_cell};
-            spike_name=neuron_files(curr_cell).name(1:end-4);
+%      for curr_cell=1:length(spike_whole)
+%             spike_times=spike_whole{curr_cell};
+%             spike_name=neuron_files(curr_cell).name(1:end-4);
+% 
+%   
+%    idx=spike_times>event_times{1}'&spike_times<event_times{3}';
+% 
+%    for curr_trial=1:length(event_times{1})
+%        spike_n=spike_times(idx(:,curr_trial))
+%        norm_spike{curr_trial}=(spike_n-spike_n(1))/(spike_n(end)-spike_n(1));
+%    end
+
+
     
     
     end
