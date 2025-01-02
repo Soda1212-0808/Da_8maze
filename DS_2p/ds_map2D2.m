@@ -1,10 +1,20 @@
 clear all
 % 定义包含CSV文件的文件夹路径
+Path = 'G:\CA3_rawdata\CA3_2p\data';    % 设置数据存放的文件夹路径
+% animals={'1464'};
+animals={'1306','1307','1309','1311','1312','1646','1974','1976'};
+
+for curr_animal=6
+    animal=animals{curr_animal};
+
+newfolderName = 'buffer_image';
+if exist(fullfile(Path,animal,newfolderName), 'dir') ~= 7
+    mkdir(fullfile(Path,animal,newfolderName));
+    disp(['Folder "', newfolderName, '" created.']);
+end
 
 
-Path = 'E:\data_8_maze\data_2p_1';    % 设置数据存放的文件夹路径
-animals={'1464'};
-animal='1464';
+% animal='1306';
 contents = dir(fullfile(Path ,animal));
 % 获取所有子文件夹的名称
 recording_files = {contents(([contents.isdir] & ~ismember({contents.name}, {'.', '..'}))).name};
@@ -25,7 +35,7 @@ file_name=fieldnames(all_data_match.animal_match_table);
 lengths = structfun(@(f)  size(f,1)    ,all_data_match.animal_match_table, 'UniformOutput', false);
 cut_edge=cell2mat(struct2cell(lengths));
 
-%仅针对1464
+% 仅针对1464
 cut_edge(end)=cut_edge(end)-1;
 
 
@@ -46,21 +56,19 @@ match_id=all_data_match.animal_match_table.(file_name{curr_day});
 data_path{curr_day}=all_data_path.cell_animal_path{curr_day}(cell2mat(match_id(:,3)),:);
 data_imgaing_all{curr_day}=subMatrices_imaging{curr_day};
 end
+
 %% 前处理迷宫轨迹采集错误的数据
-% X=table2array(data_path(:,2))+100;
-% Y=table2array(data_path(:,9))+100;
 
 X_position=cellfun(@(x)table2array(x(:,2))+100,data_path,'UniformOutput',false);
 Y_position=cellfun(@(x)table2array(x(:,9))+100,data_path,'UniformOutput',false);
 
-
 %获取MP4文件
 mp4Files=dir(fullfile(Path, animal ,'data_path_DLC' ,'*.mp4'));
+%  mp4Files=dir(fullfile(Path, animal ,'data_path_DLC' ,'*.avi'));
 mp4FilePaths=fullfile({mp4Files.folder}, {mp4Files.name});
 % 创建一个 VideoReader 对象
-v = VideoReader(mp4FilePaths{40});
+v = VideoReader(mp4FilePaths{1});
 framerate=v.framerate;
-
 % 读取第一帧
 firstFrame = readFrame(v);
 [rows, cols, channels] = size(firstFrame);
@@ -71,16 +79,15 @@ paddedFrame = uint8(255 * ones(newRows, newCols, channels)); % 白色背景
 % 将原始图像复制到新图像的中心
 paddedFrame(101:100+rows, 101:100+cols, :) = firstFrame;
 
-
 % 若之前未绘制目标区域并保存文件，在轨迹图像上绘制目标区域
 if exist(fullfile(Path, animal , bufferfolderName,'grab_picture.mat'))~=2
 display_next_frame_on_scroll(mp4FilePaths{1})
-
 figure;
 % 显示填充后的第一帧
 imshow(paddedFrame);
 hold on
 cellfun(@(x,y) scatter(x,y),X_position,Y_position,'UniformOutput',false)
+
 % plot(X,Y)
 % mask=roipoly;
 % 指定需要绘制的多边形区域数量
@@ -104,11 +111,10 @@ end
 saveas(gcf,fullfile(Path, animal ,bufferfolderName,'grab_picture.jpg'),'jpeg')
 save(fullfile(Path, animal , bufferfolderName,'grab_picture.mat'),'BW1','-mat')
 % save(fullfile(Path, animal , bufferfolderName,'grab_picture.mat'),'BW1','recordedFrameCount','-mat')
-
 else
 load(fullfile(Path, animal ,bufferfolderName,'grab_picture.mat'))
 end
-%%
+%% 提取轨迹
 X_filter_speed_all=cell(length(X_position),1);
 Y_filter_speed_all=cell(length(X_position),1);
 occupancy_time_all=cell(length(X_position),1);
@@ -163,7 +169,7 @@ occupancy_time_all{curr_day}=occupancy_time;
 end
 
 
-
+%%  计算 神经元在位置上的放电热区图   firing map
 for curr_cell=1:size(data_imgaing_all{1},1)
 
     figure('Position',[50 50 800 200]);
@@ -219,5 +225,13 @@ saveas(gcf, fullfile(Path,[ animal '\buffer_image\' animal 'neuron' num2str(curr
 end
 % close all
 
+%% 计算perievent
+all_data_event=load(fullfile(Path,animal,'merged file','merged_mice_behavior_timepoint.mat'));
+
+all_data_event.all_event_frame = cellfun(@(A,B) round(interp1(table2array(A(:, 4)), (1:size(A,1))',B, 'linear', 'extrap')),...
+    all_data_match.cell_timepoint_cell, all_data_event.all_event_timepoint','UniformOutput',false);
 
 
+
+
+end

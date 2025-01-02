@@ -1,19 +1,29 @@
 clear all
 % 设置主文件夹路径
-Path = 'E:\data_8_maze\data_2p_1\1464';
+%  Path = 'E:\data_8_maze\data_2p_1\1464';
+ Path = 'G:\CA3_rawdata\CA3_2p\data';
+ animals={'1306','1307','1309','1311','1312','1646','1974','1976'};
+
+for curr_animal=1:length(animals)
+
+            preload_vars = who;
+
+    
+    animal=animals{curr_animal};
+
 data_2p_folder='data_2p_cell';
 newfolderName = 'merged file';
-if exist(fullfile(Path,newfolderName), 'dir') ~= 7
-    mkdir(fullfile(Path,newfolderName));
+if exist(fullfile(Path,animal,newfolderName), 'dir') ~= 7
+    mkdir(fullfile(Path,animal,newfolderName));
     disp(['Folder "', newfolderName, '" created.']);
 end
 % 获取主文件夹中的所有子文件夹
-subfolders = dir(fullfile(Path,data_2p_folder));
+subfolders = dir(fullfile(Path,animal,data_2p_folder));
 subfolderNames = {subfolders.name};
 
 % 过滤出日期格式的子文件夹
 datePattern = '\d{4}-\d{2}-\d{2}';
-dateFolders = subfolderNames(cellfun(@(x) ~isempty(regexp(x, datePattern, 'once')) && isfolder(fullfile(Path,data_2p_folder, x, 'MiceVideo1')), subfolderNames));
+dateFolders = subfolderNames(cellfun(@(x) ~isempty(regexp(x, datePattern, 'once')) && isfolder(fullfile(Path,animal,data_2p_folder, x, 'MiceVideo1')), subfolderNames));
 % 获取所有日期
 dates = cellfun(@(x) regexp(x, datePattern, 'match', 'once'), dateFolders, 'UniformOutput', false);
 
@@ -21,14 +31,14 @@ dates_maze = cellfun(@(x) regexp(x, '8-maze', 'match', 'once'), dateFolders, 'Un
 
 for i=1:length(dates_maze)
 
-load(fullfile(Path,data_2p_folder, dateFolders{i}, 'matchTable.mat'))
+load(fullfile(Path,animal,data_2p_folder, dateFolders{i}, 'matchTable.mat'))
 if ~isempty(dates_maze{i})
  
 matchTable =[matchTable num2cell(ones(size(matchTable,1), 1))];
 else matchTable =[matchTable num2cell(2*ones(size(matchTable,1), 1))];
     
 end
-save(fullfile(Path,data_2p_folder, dateFolders{i}, 'matchTable_new.mat'),'matchTable')
+save(fullfile(Path,animal,data_2p_folder, dateFolders{i}, 'matchTable_new.mat'),'matchTable')
 end
 
 
@@ -41,7 +51,10 @@ uniqueDates = unique(dates);
 % 创建一个结构体数组，用于按日期存储tdms数据
 animal_timepoint = struct();
 cell_timepoint = struct();
-
+animal_match_table=struct();
+animal_match_cell=cell(numel(uniqueDates),1);
+animal_timepoint_cell =cell(numel(uniqueDates),1);
+cell_timepoint_cell = cell(numel(uniqueDates),1);
 
 % 读取并合并同一日期的tdms文件
 for dateIdx = 1:numel(uniqueDates)
@@ -49,17 +62,17 @@ for dateIdx = 1:numel(uniqueDates)
     sameDateFolders = dateFolders(strcmp(dates, dateStr));
     
     %读取并合并同一天的matchTable文件
-    match_table_mice = arrayfun(@(x) load(fullfile(Path,data_2p_folder, x{1}, 'matchTable_new.mat')), sameDateFolders, 'UniformOutput', false);
+    match_table_mice = arrayfun(@(x) load(fullfile(Path,animal,data_2p_folder, x{1}, 'matchTable_new.mat')), sameDateFolders, 'UniformOutput', false);
      % 合并数据
     buffer3 = vertcat(match_table_mice{:});
     tablesArray = cellfun(@(x) x.matchTable, num2cell(buffer3), 'UniformOutput', false);
     combined_match_table_mice = vertcat(tablesArray{:});
     % 存储到结构体
     animal_match_table.(['date_' strrep(dateStr, '-', '_')]) = combined_match_table_mice;
-
+    animal_match_cell{dateIdx}=combined_match_table_mice;
 
     % 读取并合并同一天的tdms文件
-    tdmsDataList_mice = arrayfun(@(x) tdmsread(fullfile(Path,data_2p_folder, x{1}, 'MiceVideo1', 'MiceVideo_Info.tdms')), sameDateFolders, 'UniformOutput', false);
+    tdmsDataList_mice = arrayfun(@(x) tdmsread(fullfile(Path,animal,data_2p_folder, x{1}, 'MiceVideo1', 'MiceVideo_Info.tdms')), sameDateFolders, 'UniformOutput', false);
     % 合并数据
     buffer1 = vertcat(tdmsDataList_mice{:});
     combinedTdmsData_mice = vertcat(buffer1{:});
@@ -68,8 +81,9 @@ for dateIdx = 1:numel(uniqueDates)
     combinedTdmsData_mice.ID=str2double(combinedTdmsData_mice.ID);
     % 存储到结构体
     animal_timepoint.(['date_' strrep(dateStr, '-', '_')]) = combinedTdmsData_mice;
+    animal_timepoint_cell{dateIdx}= combinedTdmsData_mice;
 
-    tdmsDataList_cell = arrayfun(@(x) tdmsread(fullfile(Path,data_2p_folder, x{1}, 'CellVideo2', 'CellVideo_CHB_Info.tdms')), sameDateFolders, 'UniformOutput', false);
+    tdmsDataList_cell = arrayfun(@(x) tdmsread(fullfile(Path,animal,data_2p_folder, x{1}, 'CellVideo2', 'CellVideo_CHB_Info.tdms')), sameDateFolders, 'UniformOutput', false);
     buffer2= vertcat(tdmsDataList_cell{:});
     combinedTdmsData_cell = vertcat(buffer2{:,2});
     combinedTdmsData_cell.Time = regexprep(combinedTdmsData_cell.Time, '-(?=[^-]*$)', ':');
@@ -80,9 +94,11 @@ for dateIdx = 1:numel(uniqueDates)
     combinedTdmsData_cell.ID=str2double(combinedTdmsData_cell.ID);
 
     cell_timepoint.(['date_' strrep(dateStr, '-', '_')]) = combinedTdmsData_cell;
-
+    cell_timepoint_cell{dateIdx}=combinedTdmsData_cell;
 
 end
 
-save(fullfile(Path,newfolderName,['merged_mice_cell_timepoint.mat']),'animal_timepoint','cell_timepoint','animal_match_table')
+save(fullfile(Path,animal,newfolderName,['merged_mice_cell_timepoint.mat']),'animal_timepoint','cell_timepoint','animal_match_table','animal_match_cell','animal_timepoint_cell','cell_timepoint_cell')
+            clearvars('-except',preload_vars{:});
 
+end

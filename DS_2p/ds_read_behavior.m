@@ -1,0 +1,49 @@
+% 主函数
+% 设置文件夹路径
+% folderPath = 'G:\CA3_rawdata\CA3_2p\data\1646\data_behavior'; % 替换为实际路径
+
+
+clear all
+% 设置主文件夹路径
+%  Path = 'E:\data_8_maze\data_2p_1\1464';
+ Path = 'G:\CA3_rawdata\CA3_2p\data';
+ animals={'1306','1307','1309','1311','1312','1646','1974','1976'};
+
+for curr_animal=6
+
+            preload_vars = who;
+
+    
+    animal=animals{curr_animal};
+
+data_behavior_folder='data_behavior';
+data_2p_folder='data_2p_cell';
+newfolderName = 'merged file';
+if exist(fullfile(Path,animal,newfolderName), 'dir') ~= 7
+    mkdir(fullfile(Path,animal,newfolderName));
+    disp(['Folder "', newfolderName, '" created.']);
+end
+
+% 获取文件夹中所有 .xlsx 文件的完整路径
+filePattern = fullfile(Path,animal,data_behavior_folder, '*.xlsx');
+xlsxFiles = dir(filePattern);
+filePaths = fullfile({xlsxFiles.folder}, {xlsxFiles.name});
+
+% 提取日期并分组文件
+datePattern = '\d{4}_\d{1,2}_\d{1,2}'; % 匹配日期模式
+fileDates = cellfun(@(name) regexp(name, datePattern, 'match', 'once'), {xlsxFiles.name}, 'UniformOutput', false);
+[groupIdx, uniqueGroups] = findgroups(fileDates);
+
+% 使用 arrayfun 遍历文件并读取数据
+dataAllFiles = cellfun(@(x) table2array(x), arrayfun(@(file) ...
+    (readtable(file{1}, 'Range', sprintf('%s%d:%s%d', 'K', 2, 'O', size(xlsread(file{1}), 1)))), ...
+    filePaths, 'UniformOutput', false), 'UniformOutput', false);
+
+% 合并数据
+all_event_timepoint = cellfun(@(x) vertcat(x{:}), splitapply(@(varargin) vertcat(varargin), dataAllFiles, groupIdx), 'UniformOutput', false);
+
+save(fullfile(Path,animal,newfolderName,'merged_mice_behavior_timepoint.mat'),'all_event_timepoint');
+            clearvars('-except',preload_vars{:});
+
+end
+
