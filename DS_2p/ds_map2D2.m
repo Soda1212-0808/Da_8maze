@@ -46,7 +46,7 @@ endIndices = cumsum(cut_edge);                    % 结束列索引
 % 使用数组操作生成子矩阵的 cell 数组
 subMatrices_imaging = arrayfun(@(s, e) data_imaging.spks(:, s:e), startIndices, endIndices, 'UniformOutput', false);
 
-data_imgaing_all=cell(5,1);
+all_data_imgaing=cell(5,1);
 data_path=cell(5,1);
 day_name={'day 0','day 1','day 2','day 3','day 4'};
 for curr_day=1:5
@@ -54,7 +54,7 @@ for curr_day=1:5
 
 match_id=all_data_match.animal_match_table.(file_name{curr_day});
 data_path{curr_day}=all_data_path.cell_animal_path{curr_day}(cell2mat(match_id(:,3)),:);
-data_imgaing_all{curr_day}=subMatrices_imaging{curr_day};
+all_data_imgaing{curr_day}=subMatrices_imaging{curr_day};
 end
 
 %% 前处理迷宫轨迹采集错误的数据
@@ -115,8 +115,8 @@ else
 load(fullfile(Path, animal ,bufferfolderName,'grab_picture.mat'))
 end
 %% 提取轨迹
-X_filter_speed_all=cell(length(X_position),1);
-Y_filter_speed_all=cell(length(X_position),1);
+all_data_X_filter_speed=cell(length(X_position),1);
+all_data_Y_filter_speed=cell(length(X_position),1);
 occupancy_time_all=cell(length(X_position),1);
 x_edges=cell(length(X_position),1);
 y_edges=cell(length(X_position),1);
@@ -163,22 +163,22 @@ occupancy_map = histcounts2(X_filter_speed, Y_filter_speed, x_edges{curr_day}, y
 % 计算占用时间（假设位置数据的采样率为 position_sampling_rate）
 occupancy_time = occupancy_map * (1 / frame_sampling_rate);
 
-X_filter_speed_all{curr_day}=X_filter_speed;
-Y_filter_speed_all{curr_day}=Y_filter_speed;
+all_data_X_filter_speed{curr_day}=X_filter_speed;
+all_data_Y_filter_speed{curr_day}=Y_filter_speed;
 occupancy_time_all{curr_day}=occupancy_time;
 end
 
 
 %%  计算 神经元在位置上的放电热区图   firing map
-for curr_cell=1:size(data_imgaing_all{1},1)
+for curr_cell=1:size(all_data_imgaing{1},1)
 
     figure('Position',[50 50 800 200]);
     colormap('jet')
-    for curr_day=1:length(data_imgaing_all)
-        spike_times=data_imgaing_all{curr_day}(curr_cell,:)';
+    for curr_day=1:length(all_data_imgaing)
+        spike_times=all_data_imgaing{curr_day}(curr_cell,:)';
         % 获取每个发放事件对应的位置索引
-        spike_x{curr_day} = X_filter_speed_all{curr_day}(spike_times>50);
-        spike_y{curr_day} = Y_filter_speed_all{curr_day}(spike_times>50);
+        spike_x{curr_day} = all_data_X_filter_speed{curr_day}(spike_times>50);
+        spike_y{curr_day} = all_data_Y_filter_speed{curr_day}(spike_times>50);
 
         % 计算发放直方图
         spike_map{curr_day} = histcounts2(spike_x{curr_day}, spike_y{curr_day}, x_edges{curr_day}, y_edges{curr_day});
@@ -228,8 +228,8 @@ end
 %% 计算perievent
 all_data_event=load(fullfile(Path,animal,'merged file','merged_mice_behavior_timepoint.mat'));
 
-all_data_event.all_event_frame = cellfun(@(A,B) round(interp1(table2array(A(:, 4)), (1:size(A,1))',B, 'linear', 'extrap')),...
-    all_data_match.cell_timepoint_cell, all_data_event.all_event_timepoint','UniformOutput',false);
+all_data_event.all_event_frame = cellfun(@(A,B) [round(interp1(table2array(A(:, 4)), (1:size(A,1))',B(:,1:5), 'linear', 'extrap')) B(:,6:7)],...
+all_data_match.cell_timepoint_cell, all_data_event.all_event_timepoint','UniformOutput',false);
 
 
 

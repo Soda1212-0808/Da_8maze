@@ -22,17 +22,17 @@ plot(round(x1(idx)), round(y1(idx)))
 
 end
 
- result=all_data_event.all_event_frame{3}(:,2)
-event_range=-50:200;
+result=all_data_event.all_event_frame{3}(:,2)
+event_range=-40:200;
 ee_event=event_range+result;
 
-[idx,order]=sort(all_data_event.all_event_frame{3}(:,6))
+order=sort(all_data_event.all_event_frame{3}(:,6))
 figure
 for ii=1:size(data_imgaing_all{3},1)
 imaging1=data_imgaing_all{3}(ii,:)>50;
 peri_event_imging{ii}=imaging1(ee_event);
 nexttile;
-imagesc(peri_event_imging{ii}(order,:));
+imagesc(peri_event_imging{ii});
 % plot(mean(peri_event_imging{ii},1))
 % clim([0 1])
 title(num2str(ii))
