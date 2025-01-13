@@ -351,12 +351,12 @@ sgtitle(num2str(curr_cell))
 
         sample_event=event_range+all_event(curr_event).data{curr_day}(~isnan(all_event(curr_event).data{curr_day}));
         event_frame=all_data_event.all_event_frame{curr_day}(~isnan(all_event(curr_event).data{curr_day}),6);
-       if curr_event==3||curr_event==4
+       if curr_event==2||curr_event==4
             [idx,order]=sort(mod(event_frame , 10));
              [align_id,n]=findgroups(mod(event_frame , 10));
        else
-        [idx,order]=sort(mod(floor(event_frame/ 10), 10));
-        [align_id,n]=findgroups(mod(floor(event_frame/ 10), 10));
+        [idx,order]=sort(event_frame);
+        [align_id,n]=findgroups(event_frame);
        end
 
         imaging1=data_imgaing_all{curr_day}(curr_cell,:)>50;
@@ -365,13 +365,13 @@ sgtitle(num2str(curr_cell))
       
          ax=nexttile(t_animal);
 
-         if curr_day==1 ||((curr_day==4||curr_day==5) &(curr_event==1||curr_event==2))
+         if curr_day==1 ||((curr_day==4||curr_day==5) &(curr_event==1||curr_event==3))
 custom_colors = [0 0 0; 0.5 0.5 0.5]; 
          elseif curr_day==2||curr_day==3;
 custom_colors = [0 0 1; 0 0 0; 1 0 0;1 0.5 0.5; 0.5 0.5 0.5;0.5 0.5 1];
-         elseif (curr_day==4||curr_day==5) &(curr_event==3||curr_event==4)
+         elseif (curr_day==4||curr_day==5) &(curr_event==2||curr_event==2)
 custom_colors = [0 0 0; 1 0 0; 0 1 0; 1 0.5 0.5; 0.5 0.5 0.5]; 
-         end
+
 ax.ColorOrder = custom_colors; % 设置颜色顺序
 ax.NextPlot = 'replacechildren'; % 确保颜色按顺序应用
 
