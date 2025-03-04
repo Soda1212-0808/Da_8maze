@@ -9,7 +9,7 @@ clear all
  Path = 'G:\CA3_rawdata\CA3_2p\data';
  animals={'1306','1307','1309','1311','1312','1646','1974','1976'};
 
-for curr_animal=6
+for curr_animal=1:length(animals)
 
             preload_vars = who;
 
@@ -25,25 +25,23 @@ if exist(fullfile(Path,animal,newfolderName), 'dir') ~= 7
 end
 
 % 获取文件夹中所有 .xlsx 文件的完整路径
-filePattern = fullfile(Path,animal,data_behavior_folder, '*.xlsx');
+filePattern = fullfile(Path,animal,data_behavior_folder, '*778.xlsx');
 xlsxFiles = dir(filePattern);
 filePaths = fullfile({xlsxFiles.folder}, {xlsxFiles.name});
 
 % 提取日期并分组文件
-datePattern = '\d{4}_\d{1,2}_\d{1,2}'; % 匹配日期模式
+datePattern = '\d{4}-\d{1,2}-\d{1,2}'; % 匹配日期模式
 fileDates = cellfun(@(name) regexp(name, datePattern, 'match', 'once'), {xlsxFiles.name}, 'UniformOutput', false);
-[groupIdx, uniqueGroups] = findgroups(fileDates);
+[uniqueGroups,b,groupIdx]=unique(fileDates,'stable');
+
+% [groupIdx, uniqueGroups] = findgroups(fileDates);
 
 % 使用 arrayfun 遍历文件并读取数据
-dataAllFiles1 = cellfun(@(x) table2array(x), arrayfun(@(file) ...
-    (readtable(file{1}, 'Range', sprintf('%s%d:%s%d', 'K', 2, 'O', size(xlsread(file{1}), 1)))), ...
-    filePaths, 'UniformOutput', false), 'UniformOutput', false);
+dataAllFiles = cellfun(@(x) table2array(x), arrayfun(@(file) ...
+    (readtable(file{1})), ...
+    filePaths, 'UniformOutput', false), 'UniformOutput', false)';
+dataAllFiles = cellfun(@(x)  ifelse(x(1,1)==0, x(2:end,:),x),   dataAllFiles, 'UniformOutput', false);
 
-dataAllFiles2 = cellfun(@(x) table2array(x), arrayfun(@(file) ...
-    (readtable(file{1}, 'Range', sprintf('%s%d:%s%d', 'G', 2, 'H', size(xlsread(file{1}), 1)))), ...
-    filePaths, 'UniformOutput', false), 'UniformOutput', false);
-
-dataAllFiles=cellfun(@(x,y) [x y ],dataAllFiles1,dataAllFiles2,'UniformOutput',false);
 % 合并数据
 all_event_timepoint = cellfun(@(x) vertcat(x{:}), splitapply(@(varargin) vertcat(varargin), dataAllFiles, groupIdx), 'UniformOutput', false);
 
