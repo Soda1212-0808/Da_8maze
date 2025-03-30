@@ -1,7 +1,7 @@
 clear all
 % 设置事件窗口
 
-psth_window = [-2,2];
+psth_window = [-5,5];
 
 % 设置直方图参数
 bin_size = 0.05; % 直方图的bin大小（单位：秒）
@@ -113,10 +113,10 @@ for curr_animal=1:length(animals)
                 end
 
                 % 绘制散点图
-                scatter(valid_spikes{curr_figure}, trial_indices{curr_figure}, 3, colors, 'filled');
-%                 scatter(valid_spikes{curr_figure}, trial_indices{curr_figure}, 3,[0.5 0.5 0.5], 'filled');
+%                 scatter(valid_spikes{curr_figure}, trial_indices{curr_figure}, 3, colors, 'filled');
+                scatter(valid_spikes{curr_figure}, trial_indices{curr_figure}, 3,[0.5 0.5 0.5], 'filled');
                     [~, first_indices] = unique(data_event_sorted(:,1), 'first');
-                    hold on
+hold on
                     yline([first_indices-0.5])
                 xlabel('Time (s)');
                 ylabel('Trial');

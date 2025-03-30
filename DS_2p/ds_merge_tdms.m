@@ -42,12 +42,10 @@ for curr_animal=1:length(animals)
     all_Dates = unique(dates)';
 
     % 创建一个结构体数组，用于按日期存储tdms数据
-    animal_timepoint = struct();
-    cell_timepoint = struct();
-    animal_match_table=struct();
-    animal_match=cell(numel(all_Dates),1);
-    animal_timepoint =cell(numel(all_Dates),1);
-    cell_timepoint = cell(numel(all_Dates),1);
+
+    %     animal_match=cell(numel(all_Dates),1);
+    %     animal_timepoint =cell(numel(all_Dates),1);
+    %     cell_timepoint = cell(numel(all_Dates),1);
 
     % 读取并合并同一日期的tdms文件
     for dateIdx = 1:numel(all_Dates)
@@ -62,8 +60,9 @@ for curr_animal=1:length(animals)
         tablesArray = cellfun(@(x) x.matchTable, num2cell(buffer3), 'UniformOutput', false);
         combined_match_table_mice = vertcat(tablesArray{:});
         % 存储到结构体
-        %     animal_match_table.(['date_' strrep(dateStr, '-', '_')]) = combined_match_table_mice;
-        animal_match{dateIdx}=combined_match_table_mice;
+
+        %         animal_match{dateIdx}=combined_match_table_mice;
+        animal_match=combined_match_table_mice;
 
         % 读取并合并同一天的tdms文件
         tdmsDataList_mice = arrayfun(@(x) tdmsread(fullfile(Path,animal,data_2p_folder, x{1}, 'MiceVideo1', 'MiceVideo_Info.tdms')), sameDateFolders, 'UniformOutput', false);
@@ -74,8 +73,9 @@ for curr_animal=1:length(animals)
         combinedTdmsData_mice.timepoint = seconds(datetime(combinedTdmsData_mice.Time, 'InputFormat', 'yyyy-MM-dd HH:mm:ss.SSS')-datetime(combinedTdmsData_mice.Time(1), 'InputFormat', 'yyyy-MM-dd HH:mm:ss.SSS'));
         combinedTdmsData_mice.ID=str2double(combinedTdmsData_mice.ID);
         % 存储到结构体
-        %     animal_timepoint.(['date_' strrep(dateStr, '-', '_')]) = combinedTdmsData_mice;
-        animal_timepoint{dateIdx}= combinedTdmsData_mice;
+
+        %         animal_timepoint{dateIdx}= combinedTdmsData_mice;
+        video_timepoint= combinedTdmsData_mice;
 
         tdmsDataList_cell = arrayfun(@(x) tdmsread(fullfile(Path,animal,data_2p_folder, x{1}, 'CellVideo2', 'CellVideo_CHB_Info.tdms')), sameDateFolders, 'UniformOutput', false);
         buffer2= vertcat(tdmsDataList_cell{:});
@@ -87,13 +87,18 @@ for curr_animal=1:length(animals)
         combinedTdmsData_cell.timepoint = seconds(datetime(combinedTdmsData_cell.Time, 'InputFormat', 'yyyy-MM-dd HH:mm:ss.SSS')-datetime(combinedTdmsData_cell.Time(1), 'InputFormat', 'yyyy-MM-dd HH:mm:ss.SSS'));
         combinedTdmsData_cell.ID=str2double(combinedTdmsData_cell.ID);
 
-        %     cell_timepoint.(['date_' strrep(dateStr, '-', '_')]) = combinedTdmsData_cell;
-        cell_timepoint{dateIdx}=combinedTdmsData_cell;
+%         cell_timepoint{dateIdx}=combinedTdmsData_cell;
+        cell_timepoint=combinedTdmsData_cell;
+        if exist(fullfile(Path,animal,dateStr), 'dir') ~= 7
+        mkdir(fullfile(Path,animal,dateStr));
+        disp(['Folder "', dateStr, '" created.']);
+    end
+   save(fullfile(Path,animal,dateStr,[dateStr ,'_video_cell_match.mat']),'animal_match','video_timepoint','cell_timepoint','-v7.3')
 
     end
 
     % save(fullfile(Path,animal,newfolderName,['merged_mice_cell_timepoint.mat']),'uniqueDates','animal_timepoint','cell_timepoint','animal_match_table','animal_match_cell','animal_timepoint_cell','cell_timepoint_cell')
-    save(fullfile(Path,animal,newfolderName,['merged_mice_cell_timepoint.mat']),'all_Dates','animal_match','animal_timepoint','cell_timepoint')
+%     save(fullfile(Path,animal,newfolderName,['merged_mice_cell_timepoint.mat']),'all_Dates','animal_match','animal_timepoint','cell_timepoint')
 
 
     clearvars('-except',preload_vars{:});

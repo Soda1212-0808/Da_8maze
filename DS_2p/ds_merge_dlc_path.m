@@ -1,10 +1,10 @@
 clear all
 % 定义包含CSV文件的文件夹路径
-Path = 'D:\SDdata\data_2p_1';
 
+% Path = 'D:\SDdata\data_2p_1';
  Path = 'G:\CA3_rawdata\CA3_2p\data';
- animals={'1306','1307','1309','1311','1312','1646','1974','1976'};
- 
+  animals={'1306','1307','1309','1311','1312','1646','1974','1976'};
+
 for curr_animal=1:8
     animal=animals{curr_animal};
 
