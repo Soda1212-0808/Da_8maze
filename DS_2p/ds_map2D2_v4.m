@@ -1,8 +1,10 @@
-clear all
+clearvars
 % 定义包含CSV文件的文件夹路径
 Path = 'G:\CA3_rawdata\CA3_2p\data';    % 设置数据存放的文件夹路径
 % animals={'1464'};
 animals={'1646','1306','1307','1309','1311','1312','1974','1976'};
+
+
 
 for curr_animal=3:length(animals)
                 preload_vars = who;
@@ -42,6 +44,7 @@ for curr_animal=3:length(animals)
 
 
     %% 保存轨迹 BW1
+
     bufferfolderName = 'bufferFile';
     X_position=cellfun(@(x)table2array(x(:,2))+100,all_data_path,'UniformOutput',false);
     Y_position=cellfun(@(x)table2array(x(:,3))+100,all_data_path,'UniformOutput',false);

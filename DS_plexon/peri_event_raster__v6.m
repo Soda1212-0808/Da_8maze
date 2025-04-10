@@ -48,11 +48,11 @@ for curr_animal=1:length(animals)
 
 
         neuron_files=dir(fullfile(Path ,animal , recording_files{curr_file} ,'*.t'));
-        spike_whole = arrayfun(@(f) readmclusttfile(fullfile(f.folder, f.name))'/10000, ...
+        spikes_all = arrayfun(@(f) readmclusttfile(fullfile(f.folder, f.name))'/10000, ...
             neuron_files, 'UniformOutput', false);
 
-        for curr_cell=1:length(spike_whole)
-            spike_times=spike_whole{curr_cell};
+        for curr_cell=1:length(spikes_all)
+            spike_times=spikes_all{curr_cell};
             spike_name=neuron_files(curr_cell).name(1:end-2);
             %%整个spike的平均值和标准差
             all_counts = histcounts(spike_times, min(spike_times):bin_size:max(spike_times));

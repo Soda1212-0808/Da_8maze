@@ -1,0 +1,125 @@
+clear all
+% 设置事件窗口
+
+psth_window = [-2,2];
+
+% 设置直方图参数
+bin_size = 0.05; % 直方图的bin大小（单位：秒）
+smooth_window=20;
+Path='E:\SDdata\WT\each mice\'
+% Path = 'H:\CA3_reprocess\each mice\';    % 设置数据存放的文件夹路径
+animals={'DCA3-9','DCA3-10','DCA3-11','DCA3-12','DCA3-14','DCA3-17','DCA3-20'};
+newfolderName = 'PSTH';
+if exist(fullfile(Path,newfolderName), 'dir') ~= 7
+    mkdir(fullfile(Path,newfolderName));
+    disp(['Folder "', newfolderName, '" created.']);
+end
+for curr_animal=1:length(animals)
+    % 获取文件夹中的所有内容
+    animal=animals{curr_animal};
+    contents = dir([Path animal]);
+    % 获取所有子文件夹的名称
+    recording_files = {contents(([contents.isdir] & ~ismember({contents.name}, {'.', '..'}))).name};
+
+    for curr_file=1:2
+        %处理event数据
+        event_file=dir(fullfile(Path, animal ,recording_files{curr_file} ,'*data_m1.csv'));
+        data_event=csvread(fullfile(event_file.folder , event_file.name));
+        %         [event_idx,event_type]=findgroups(data_event(:,1));
+        % 指定排序顺序
+        desiredOrder = [26, 62, 17, 71, 35, 53];
+        % 创建排序索引
+        [~, sortIndex] = ismember(data_event(:, 1), desiredOrder);
+        % 根据desiredOrder排序
+        [~, sortOrder] = sort(sortIndex);
+        % 对矩阵进行排序
+        data_event_sorted = data_event(sortOrder, :);
+        data_event_sorted_correct= data_event_sorted(data_event_sorted(:,2)==1,:);
+
+        event_times{1}=sort(data_event_sorted(:,3));
+        event_times{2}=sort(data_event_sorted(:,4));
+        event_times{3}=sort(data_event_sorted(:,5));
+        event_times{4}=sort(data_event_sorted(:,6));
+        event_times{5}=sort(data_event_sorted(:,7));
+        event_times{6}=sort(data_event_sorted(:,8));
+        event_times{7}=sort(data_event_sorted(:,9));
+        event_times{8}=sort(data_event_sorted(:,10));
+
+
+
+        event_times{1}=sort(data_event_sorted(data_event_sorted(:,2)==17,3));
+        event_times{2}=sort(data_event_sorted(data_event_sorted(:,1)==71,3));
+        event_times{3}=sort(data_event_sorted(data_event_sorted(:,1)==26,3));
+        event_times{4}=sort(data_event_sorted(data_event_sorted(:,1)==62,3));
+        event_times{5}=sort(data_event_sorted(data_event_sorted(:,1)==35,3));
+        event_times{6}=sort(data_event_sorted(data_event_sorted(:,1)==53,3));
+  event_times{7}=sort(data_event_sorted(:,3));
+
+
+        neuron_files=dir(fullfile(Path ,animal , recording_files{curr_file} ,'*.t'));
+        spikes_all = arrayfun(@(f) readmclusttfile(fullfile(f.folder, f.name))'/10000, ...
+            neuron_files, 'UniformOutput', false);
+
+
+
+templates_all = cell2mat(arrayfun(@(idx, n) repmat(idx, n, 1),...
+    (1:numel(cellfun(@numel, spikes_all)))', cellfun(@numel, spikes_all), 'UniformOutput', false));
+[spike_times_timelite, sort_idx] = sort(cell2mat(spikes_all));
+spike_templates = templates_all(sort_idx);
+
+
+
+  all_unit_psth_smooth_norm=...
+   cellfun(@(x) normalize( ap.psth(spike_times_timelite,x,spike_templates,'smoothing',100,...
+   'window',[-2 2],'bin_size',0.001),2)...
+   ,event_times,'UniformOutput',false);
+     
+  
+ 
+
+spike_binning_t = 0.05; % seconds
+spike_binning_t_edges = nanmin(spike_times_timelite):spike_binning_t:nanmax(spike_times_timelite);
+
+binned_spikes_depth = zeros(length(spikes_all),length(spike_binning_t_edges)-1);
+
+for curr_cell=1:length(spikes_all)
+      binned_spikes_depth(curr_cell,:)=histcounts(spike_times_timelite( ...
+        spike_templates==curr_cell),spike_binning_t_edges);
+end
+
+mua_corr = corrcoef(binned_spikes_depth');
+figure;
+imagesc(1:length(spikes_all),1:length(spikes_all),mua_corr);
+axis image;
+clim([-1,1].*0.5);
+colormap(ap.colormap('BWR'))
+
+% 转为距离矩阵
+dist = 1 - mua_corr;
+Y = squareform(dist);
+Z = linkage(Y, 'average');
+leafOrder = optimalleaforder(Z, Y);
+
+% 重排
+mua_corr_sorted = mua_corr(leafOrder, leafOrder);
+
+% 可视化
+figure;
+imagesc(mua_corr_sorted);
+clim([-1,1].*0.2);
+colormap(ap.colormap('BWR'))
+ 
+raster_window = [-2,2];
+psth_bin_size = 0.001;
+t_bins = raster_window(1):psth_bin_size:raster_window(2);
+t_centers = conv2(t_bins,[1,1]/2,'valid');
+figure
+hold on
+  for curr_i=1:7
+      nexttile
+      imagesc(t_bins,[],all_unit_psth_smooth_norm{curr_i}(leafOrder,:))
+      clim([0.8 1])
+      colormap(ap.colormap('WK'))
+
+  end
+  drawnow
