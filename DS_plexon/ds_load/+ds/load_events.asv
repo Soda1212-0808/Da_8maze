@@ -1,0 +1,20 @@
+% load events
+%处理event数据
+event_file=dir(fullfile(Path, animal ,rec_day,'behavior' ,'*data_m1.csv'));
+
+data_event=csvread(fullfile(event_file.folder , event_file.name));
+
+events_name= unique (data_event(:,1));
+
+event_times=cell(8,1);
+event_times(1:4) = arrayfun(@(event) arrayfun(@(id) sort(data_event(data_event(:,1) == id, event)),...
+    events_name, 'UniformOutput', false),...
+    3:6, 'UniformOutput', false);
+
+events_name_swapped = mod(events_name,10)*10 + floor(events_name/10);
+event_times(5:8) = arrayfun(@(event) arrayfun(@(id) sort(data_event(data_event(:,1) == id, event)),...
+    events_name_swapped, 'UniformOutput', false),...
+    7:10, 'UniformOutput', false);
+event_labels={'sample begin';'sample arm';'sample reward';'delay';...
+    'choice begin';'choice arm';'choice reward';'end'};
+events=struct('event_labels',event_labels,'event_times',event_times);

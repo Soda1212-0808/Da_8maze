@@ -2,6 +2,7 @@ clear all
 
 Path='E:\SDdata\WT\each mice\';
 % Path = 'H:\CA3_reprocess\each mice\';    % 设置数据存放的文件夹路径
+
 animals={'DCA3-9','DCA3-10','DCA3-11','DCA3-12','DCA3-14','DCA3-17','DCA3-20'};
 newfolderName = 'PSTH';
 if exist(fullfile(Path,newfolderName), 'dir') ~= 7
@@ -19,54 +20,33 @@ reponse_window=[-0.5 0.5]
 all_response_idx=cell(length(animals),1);
 all_psth=cell(length(animals),1);
 all_raster=cell(length(animals),1);
-for curr_animal=7
+for curr_animal=1:length(animals)
     % 获取文件夹中的所有内容
     animal=animals{curr_animal};
     contents = dir([Path animal]);
     % 获取所有子文件夹的名称
-    recording_files = {contents(([contents.isdir] & ~ismember({contents.name}, {'.', '..'}))).name};
+    recording_days = {contents(([contents.isdir] & ~ismember({contents.name}, {'.', '..'}))).name};
 
     for curr_day=1
-        %处理event数据
-        event_file=dir(fullfile(Path, animal ,recording_files{curr_day} ,'*data_m1.csv'));
-        data_event=csvread(fullfile(event_file.folder , event_file.name));
-
-        events_name= unique (data_event(:,1));
-        events_name_swapped = mod(events_name,10)*10 + floor(events_name/10);
-
-        event_times=cell(8,1);
-        event_times(1:4) = arrayfun(@(event) arrayfun(@(id) sort(data_event(data_event(:,1) == id, event)),...
-            events_name, 'UniformOutput', false),...
-            3:6, 'UniformOutput', false);
-
-        event_times(5:8) = arrayfun(@(event) arrayfun(@(id) sort(data_event(data_event(:,1) == id, event)),...
-            events_name_swapped, 'UniformOutput', false),...
-            7:10, 'UniformOutput', false);
+        rec_day=recording_days{curr_day};
 
 
 
+        % lod events
 
-        neuron_files=dir(fullfile(Path ,animal , recording_files{curr_day} ,'*.t'));
-        spikes_all = arrayfun(@(f) readmclusttfile(fullfile(f.folder, f.name))'/10000, ...
-            neuron_files, 'UniformOutput', false);
+        ds.load_events
 
-        templates_all = cell2mat(arrayfun(@(idx, n) repmat(idx, n, 1),...
-            (1:numel(cellfun(@numel, spikes_all)))', cellfun(@numel, spikes_all), 'UniformOutput', false));
-        [spike_times_timelite, sort_idx] = sort(cell2mat(spikes_all));
-        spike_templates = templates_all(sort_idx);
+        % load spikes
+        ds.load_spikes
 
 
-       
         [psth_smooth,raster,~]=...
             cellfun(@(y) cellfun(@(x) ap.psth(spike_times_timelite,x,spike_templates,'smoothing',smooth_window,...
             'window',raster_window,'bin_size',psth_bin_size),y,'UniformOutput',false)...
             ,event_times,'UniformOutput',false);
 
-
-
         psth_smooth_norm=cellfun(@(y) cellfun(@(x) normalize(x,2),y,'UniformOutput',false),...
             psth_smooth,'UniformOutput',false);
-
 
         response_unit= cellfun(@(y) cellfun(@(x) x>2,y,'UniformOutput',false),...
             psth_smooth_norm,'UniformOutput',false)
@@ -91,19 +71,16 @@ for curr_animal=7
 
                 nexttile
                 temp_data=psth_smooth_norm{curr_timepoint}{curr_task}(response_idx{curr_timepoint}{curr_task}>1,:);
-
-
                 [a,b]=sort(response_idx{curr_timepoint}{curr_task}(response_idx{curr_timepoint}{curr_task}>1));
-
                 imagesc(t_bins ,[],temp_data(b,:))
-
-                clim([2 2.2])
+                clim([0 2.2])
                 colormap(ap.colormap('WK'))
 
 
 
             end
         end
+
         sgtitle([animal ' day ' num2str(curr_day)])
         drawnow
         all_response_idx{curr_animal}{curr_day}= ...
@@ -114,7 +91,8 @@ for curr_animal=7
     end
 end
 
-    
+
+
 
 
 
@@ -138,88 +116,29 @@ for curr_timepoint=[1 2 5 6]
   
       nexttile
 
-temp_idx=  permute(all_response_idx_curr_day1_1(curr_task,curr_timepoint,:),[3,2,1]);
-if ismember(curr_timepoint,[2 3 6 7])
-    selected_idx=temp_idx>100;
+temp_idx=  permute(all_response_idx_curr_day1_1(curr_task,2,:),[3,2,1]);
+% if ismember(curr_timepoint,[2 3 6 7])
+%     selected_idx=temp_idx>100;
+% 
+% else
+% selected_idx=temp_idx>1;
+% end
 
-else
-selected_idx=temp_idx>1;
-end
 
-
-[a,b]=sort(temp_idx(selected_idx));
+[a,b]=sort(temp_idx);
 temp_data=permute(all_psth_curr_day1_1(curr_task,curr_timepoint,...
-    selected_idx,:),[3,4,2,1]);
+    :,:),[3,4,2,1]);
 
 
 
 imagesc(t_bins ,[],temp_data(b,:))
 xline(0)
-      clim([0 2])
+      clim([0 5])
       colormap(ap.colormap('WK'))
 
 
 
 
-
-
-    end
-    end
-
-%%
-
-reponsive_idx=cell(6,1);
-for curr_task=1:6
-temp_idx_single_event=  permute(all_response_idx_curr_day1_1(curr_task,:,:),[3,2,1]);
-
-temp_reponsive_idx=nan(size(temp_idx_single_event));
-for curr_timepoint=1:8
-    if curr_timepoint==1|| curr_timepoint==5
-    temp_reponsive_idx(:,curr_timepoint)=temp_idx_single_event(:,curr_timepoint)>1;
-    elseif  curr_timepoint==2||curr_timepoint==6
-    temp_reponsive_idx(:,curr_timepoint)=temp_idx_single_event(:,curr_timepoint)>100;
-    else
-    temp_reponsive_idx(:,curr_timepoint)=temp_idx_single_event(:,curr_timepoint)>1;
-    end
-end
-
-
- temp_reponsive_idx(temp_reponsive_idx(:,2)==1,1)=0
- temp_reponsive_idx(temp_reponsive_idx(:,6)==1,5)=0
-
- reponsive_idx{curr_task}= temp_reponsive_idx(:,[1 2 5 6]);
-
-end
-
-
-
-
-
-
-%%
-figure
-tiledlayout(6, 4);
-
-for curr_task=1:6
-
-[a,b ]=sortrows(reponsive_idx{curr_task},[-1 -2 -3 -4])
-
-for curr_timepoint=[1 2 5 6]
-  
-      nexttile
-
-
-
-% [a,b]=sort(temp_idx(selected_idx));
-temp_data=permute(all_psth_curr_day1_1(curr_task,curr_timepoint,...
-    :,:),[3,4,2,1]);
-
-
-temp_data1=temp_data(b,:);
-imagesc(t_bins ,[],temp_data1(1:100,:))
-xline(0)
-      clim([1.8 2])
-      colormap(ap.colormap('WK'))
 
 
     end
@@ -262,7 +181,7 @@ raster_window = [-2,2];
 psth_bin_size = 0.001;
 t_bins = raster_window(1):psth_bin_size:raster_window(2);
 t_centers = conv2(t_bins,[1,1]/2,'valid');
-%%
+    %%
   
 figure
 tiledlayout(6, 4);
@@ -275,7 +194,7 @@ for curr_timepoint=[1 2 5 6]
 
 
 
-temp_data=permute(all_psth{7}{1}(curr_task,curr_timepoint,...
+temp_data=permute(all_psth{curr_animal}{1}(curr_task,curr_timepoint,...
     :,:),[3,4,2,1]);
 
 
@@ -287,3 +206,66 @@ xline(0)
 
     end
     end
+
+    
+    %% 暂时没用
+
+reponsive_idx=cell(6,1);
+for curr_task=1:6
+temp_idx_single_event=  permute(all_response_idx_curr_day1_1(curr_task,:,:),[3,2,1]);
+
+temp_reponsive_idx=nan(size(temp_idx_single_event));
+for curr_timepoint=1:8
+    if curr_timepoint==1|| curr_timepoint==5
+    temp_reponsive_idx(:,curr_timepoint)=temp_idx_single_event(:,curr_timepoint)>1;
+    elseif  curr_timepoint==2||curr_timepoint==6
+    temp_reponsive_idx(:,curr_timepoint)=temp_idx_single_event(:,curr_timepoint)>100;
+    else
+    temp_reponsive_idx(:,curr_timepoint)=temp_idx_single_event(:,curr_timepoint)>1;
+    end
+end
+
+
+ temp_reponsive_idx(temp_reponsive_idx(:,2)==1,1)=0
+ temp_reponsive_idx(temp_reponsive_idx(:,6)==1,5)=0
+
+ reponsive_idx{curr_task}= temp_reponsive_idx(:,[1 2 5 6]);
+
+end
+
+
+
+
+
+
+%% 暂时没用
+
+figure
+tiledlayout(6, 4);
+
+for curr_task=1:6
+
+[a,b ]=sortrows(reponsive_idx{curr_task},[-1 -2 -3 -4])
+
+for curr_timepoint=[1 2 5 6]
+  
+      nexttile
+
+
+
+% [a,b]=sort(temp_idx(selected_idx));
+temp_data=permute(all_psth_curr_day1_1(curr_task,curr_timepoint,...
+    :,:),[3,4,2,1]);
+
+
+temp_data1=temp_data(b,:);
+imagesc(t_bins ,[],temp_data1(1:100,:))
+xline(0)
+      clim([1.8 2])
+      colormap(ap.colormap('WK'))
+
+
+    end
+    end
+
+
