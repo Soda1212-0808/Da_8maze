@@ -27,8 +27,10 @@ ds.load_events
 bin_size=10;
 position_time= data_path.time(recordedFrameCount:end);
 
-%  inIntervals = position_time >= (data_event( :,3)-1)' & position_time <= (data_event(:,5)+1)';
-inIntervals = position_time >= (data_event( :,7)-1)' & position_time <= (data_event(:,9)+1)';
+% sample period or choice period
+inIntervals_sample = position_time >= (data_event( :,3)-1)' & position_time <= (data_event(:,5)+1)';
+inIntervals_choice = position_time >= (data_event( :,7)-1)' & position_time <= (data_event(:,9)+1)';
+inIntervals=[inIntervals_sample inIntervals_choice];
 
 position_time_by_trial=arrayfun(@(trial) position_time(inIntervals(:,trial)) ,1:size(inIntervals,2), 'UniformOutput', false)
 X_by_trial=arrayfun(@(trial) X_filter(inIntervals(:,trial)) ,1:size(inIntervals,2), 'UniformOutput', false)
@@ -50,10 +52,7 @@ Y_by_trial_filled=cellfun(@(x)  interp1(find(~isnan(x)),x(~isnan(x)),(1:length(x
 %  axis square
 % end
 
-
-
 position_time_resort=cell2mat(cellfun(@(x)  [x;x(end)+1/framerate],position_time_by_trial,'UniformOutput',false)');
-
 X_resort=cell2mat(cellfun(@(x)  [x;nan],X_by_trial_filled,'UniformOutput',false)');
 Y_resort=cell2mat(cellfun(@(x)  [x;nan],Y_by_trial_filled,'UniformOutput',false)');
 % figure;

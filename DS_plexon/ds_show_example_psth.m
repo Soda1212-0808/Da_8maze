@@ -1,0 +1,255 @@
+clear all
+
+% Path = 'H:\Telc-CA3\each mice';
+% animals={'DCA3-22(LCA3-Telc)','DCA3-23(LCA3-Telc)','DCA3-24(RCA3-Telc)','DCA3-25(LCA3-Telc)',...
+%     'DCA3-26(LCA3-Telc)','DCA3-28(RCA3-Telc)','DCA3-29(RCA3-Telc)'};
+
+Path = 'E:\SDdata\WT\each mice';    % 设置数据存放的文件夹路径
+animals={'DCA3-9','DCA3-10','DCA3-11','DCA3-12','DCA3-14','DCA3-17','DCA3-20'};
+for curr_animal=1:length(animals)
+animal=animals{curr_animal};
+curr_day=1;
+
+contents = dir(fullfile(Path ,animal));
+recording_days = {contents(([contents.isdir] & ~ismember({contents.name}, {'.', '..'}))).name};
+rec_day=recording_days{curr_day};
+
+% loading
+ds.load_spikes
+ds.load_video_track
+ds.load_events
+
+% occupancy_map
+bin_size=10;
+position_time= data_path.time(recordedFrameCount:end);
+
+% sample period or choice period
+inIntervals_sample = position_time >= (data_event( :,3)-1)' & position_time <= (data_event(:,5)+1)';
+inIntervals_choice = position_time >= (data_event( :,7)-1)' & position_time <= (data_event(:,9)+1)';
+inIntervals_2stage=[inIntervals_sample inIntervals_choice];
+
+
+position_time_resort=cell(3,1);
+X_resort=cell(3,1);
+Y_resort=cell(3,1);
+x_edges=cell(3,1);
+y_edges=cell(3,1);
+occupancy_time=cell(3,1);
+for curr_interval=1:3
+switch curr_interval
+    case 1
+        inIntervals=inIntervals_sample;
+    case 2
+        inIntervals=inIntervals_choice;
+    case 3
+        inIntervals=inIntervals_2stage;
+end
+% inIntervals={inIntervals_sample,inIntervals_choice,inIntervals_2stage2,inIntervals_all};
+
+position_time_by_trial=arrayfun(@(trial) position_time(inIntervals(:,trial)) ,1:size(inIntervals,2), 'UniformOutput', false);
+X_by_trial=arrayfun(@(trial) X_filter(inIntervals(:,trial)) ,1:size(inIntervals,2), 'UniformOutput', false);
+Y_by_trial=arrayfun(@(trial) Y_filter(inIntervals(:,trial)) ,1:size(inIntervals,2), 'UniformOutput', false);
+X_by_trial_filled=cellfun(@(x)  interp1(find(~isnan(x)),x(~isnan(x)),(1:length(x))',"linear"),X_by_trial, 'UniformOutput', false);
+Y_by_trial_filled=cellfun(@(x)  interp1(find(~isnan(x)),x(~isnan(x)),(1:length(x))',"linear"),Y_by_trial, 'UniformOutput', false);
+
+
+position_time_resort{curr_interval}=cell2mat(cellfun(@(x)  [x;x(end)+1/framerate],position_time_by_trial,'UniformOutput',false)');
+X_resort{curr_interval}=cell2mat(cellfun(@(x)  [x;nan],X_by_trial_filled,'UniformOutput',false)');
+Y_resort{curr_interval}=cell2mat(cellfun(@(x)  [x;nan],Y_by_trial_filled,'UniformOutput',false)');
+
+frame_rate=30;
+% 定义网格的边界和分辨率
+x_edges{curr_interval} = min(X_resort{curr_interval}-20):bin_size:max(X_resort{curr_interval}+20);
+y_edges{curr_interval} = min(Y_resort{curr_interval}-20):bin_size:max(Y_resort{curr_interval}+20);
+
+% 计算占用直方图
+occupancy_map = histcounts2(X_resort{curr_interval}, Y_resort{curr_interval}, x_edges{curr_interval}, y_edges{curr_interval});
+occupancy_time{curr_interval} = occupancy_map * (1 / frame_rate);
+end
+
+
+figure;
+for curr_cell=1:length(spikes_all)
+
+ spike_times=spikes_all{curr_cell};
+    % 获取每个发放事件对应的位置索引
+
+    smoothed_rate_map=cell(3,1)
+    for curr_interval=1:3
+        spike_x = interp1(position_time_resort{curr_interval}, X_resort{curr_interval}, spike_times);
+        spike_y = interp1(position_time_resort{curr_interval}, Y_resort{curr_interval}, spike_times);
+
+        spike_map = histcounts2(spike_x, spike_y, x_edges{curr_interval}, y_edges{curr_interval});
+        rate_map = spike_map ./ occupancy_time{curr_interval};
+
+        nan_mask = isnan(rate_map);
+        rate_map_nan0 = rate_map;
+        rate_map_nan0(nan_mask) = 0; % 将NaN值（由于0占用时间导致的）设为0
+        rate_map_nan0(isinf(rate_map_nan0))=0;
+        smooth_sigma = 1; % 根据需要调整
+        % 对发放速率地图进行高斯平滑
+        smoothed_rate_map{curr_interval} = imgaussfilt(rate_map_nan0, smooth_sigma);
+        %       smoothed_rate_map=flipud(smoothed_rate_map);
+        if strcmp(animal,'DCA3-20')
+            smoothed_rate_map{curr_interval}=rot90(smoothed_rate_map{curr_interval},-1);
+        end
+
+    end
+
+
+    %place field
+ratemap_smooth=smoothed_rate_map{3};
+threshold = max(0.4 * max(ratemap_smooth(:)),4); % 可调
+binary_map = ratemap_smooth > threshold;
+CC = bwconncomp(binary_map); % 识别所有连通区域
+fields = regionprops(CC, ratemap_smooth, 'Area', 'PixelIdxList', 'MeanIntensity');
+min_field_area = 4; % 至少 3x3 像素，例如
+valid_fields = fields([fields.Area] > min_field_area);
+
+% 合并所有位置野的 PixelIdxList（线性索引）
+all_idx = vertcat(valid_fields.PixelIdxList);  % [N x 1] 向量
+% 1. 构造 final_binary_mask：布尔矩阵
+final_binary_mask = false(size(ratemap_smooth));
+final_binary_mask(all_idx) = true;
+% 2. 构造 place_field_mask：仅保留 ratemap_smooth 中 >0 的部分
+place_field_mask = zeros(size(ratemap_smooth));
+place_field_mask(all_idx) = ratemap_smooth(all_idx) > 0;  % 或保留原值
+boundaries = bwboundaries(final_binary_mask);
+
+
+
+
+
+    modified_string = strrep(neuron_files(curr_cell).name(1:end-2), '_', '-');
+
+    % Set raster time bins
+    raster_window = [-2,2];
+    psth_bin_size = 0.005;
+    raster_t_bins = raster_window(1):psth_bin_size:raster_window(2);
+
+    % Get psth/raster of spikes to plot
+    [use_spikes,spike_groups] = ismember(spike_templates,curr_cell);
+    [psth,raster,raster_t] =cellfun(@(stage) cellfun(@(x) ap.psth(spike_times_timelite(use_spikes), ...
+        x,spike_groups(use_spikes),'window',raster_window,'bin_size',psth_bin_size),stage,'UniformOutput',false),...
+        event_times,'UniformOutput',false);
+
+     [psth_arm,raster_arm,raster_t] =cellfun(@(stage) cellfun(@(x) ap.psth(spike_times_timelite(use_spikes), ...
+        x,spike_groups(use_spikes),'window',raster_window,'bin_size',psth_bin_size),stage,'UniformOutput',false),...
+        arm_times,'UniformOutput',false);
+
+
+    colors={[0 0 1],[0 0 0],[1 0 0],[1 0.5 0.5],[0.5 0.5 0.5],[0.5 0.5 1]}
+
+% 
+%     figure('Position',[50 50 1000 600],'Name',modified_string)
+%     all_out=tiledlayout(1, 9, 'TileSpacing', 'tight', 'Padding', 'tight');
+%     sgtitle(all_out,[animal '\_day\_' num2str(curr_day) '\_' modified_string])
+%     images_3=tiledlayout(all_out,3,1,'TileSpacing','none','Padding','none')
+%     images_3.Layout.Tile = 1;
+%     for curr_interval=1:3
+%         nexttile(images_3,curr_interval)
+%         imagesc(x_edges{curr_interval}, y_edges{curr_interval}, smoothed_rate_map{curr_interval}); axis image off;
+%         clim([0   nanmean(cellfun(@(x) nanmax(x(:)),smoothed_rate_map,'UniformOutput',true))])
+%         colormap(ap.colormap('WK'))
+% 
+%     end
+% 
+%     formatted_value = sprintf('%.1f', round(spike_freq(curr_cell),1));
+%     sgtitle([modified_string ': ' formatted_value 'Hz'])
+% 
+%     ax_psth = gobjects(1,8);  % 存储每列第一个图的句柄
+%     for curr_stage=1:8
+% 
+%         each_stage=tiledlayout(all_out,7,1,'TileSpacing','none','Padding','none')
+%         each_stage.Layout.Tile = curr_stage+1;  % 明确放在主 layout 的第 2 个 tile
+% 
+%         ax_psth(curr_stage) = nexttile(each_stage, 1);
+%         hold on
+%         for curr_line=1:length(raster_t{curr_stage})
+%             plot(raster_t{curr_stage}{curr_line},smoothdata(psth{curr_stage}{curr_line},2,'gaussian',100)','linewidth',2,'Color',colors{curr_line})
+%         end
+%         xlim([-1.5 1.5])
+%         xline(0)
+%         axis off
+% 
+%         [raster_y,raster_x] =cellfun(@(x) find(x),raster{curr_stage},'UniformOutput',false  );
+%         for curr_line=1:length(raster_t{curr_stage})
+%             ax(curr_line) = nexttile(each_stage);
+%             plot(raster_t{curr_stage}{curr_line}(raster_x{curr_line}),raster_y{curr_line},...
+%                 'LineStyle', 'none',  'Marker', '.', 'Color', colors{curr_line},'MarkerSize',2);
+%             xlim([-1.5 1.5])
+% 
+%             xline(0);
+%             axis off
+%         end
+%         linkaxes(ax, 'y');
+% 
+%     end
+%     linkaxes(ax_psth, 'y');
+% 
+%     saveas(gcf,[Path '\PSTH\' animal '_day_' num2str(curr_day) '_' modified_string  ], 'jpg');
+%     close all
+
+
+% arm
+figure('Position',[50 50 1000 600],'Name',modified_string)
+
+all_out=tiledlayout(1, 5, 'TileSpacing', 'tight', 'Padding', 'tight');
+sgtitle(all_out,[animal '\_day\_' num2str(curr_day) '\_no' num2str(curr_cell),'\_' modified_string])
+images_3=tiledlayout(all_out,2,1,'TileSpacing','none','Padding','none')
+images_3.Layout.Tile = 1;
+curr_interval=3
+for copy=1:2
+    nexttile(images_3,copy)
+    imagesc(smoothed_rate_map{curr_interval}); axis image off;
+    clim([0   nanmean(cellfun(@(x) nanmax(x(:)),smoothed_rate_map,'UniformOutput',true))])
+    colormap(ap.colormap('WK'))
+    colorbar
+    if copy==2
+        hold on
+        for k = 1:length(boundaries)
+    boundary = boundaries{k};
+    plot(boundary(:,2), boundary(:,1), 'r-', 'LineWidth', 2); % (x,y) 顺序注意
+        end
+    end
+
+end
+
+formatted_value = sprintf('%.1f', round(spike_freq(curr_cell),1));
+sgtitle([modified_string ': ' formatted_value 'Hz'])
+ax_psth = gobjects(1,4);  % 存储每列第一个图的句柄
+for curr_stage=1:4
+
+    each_stage=tiledlayout(all_out,7,1,'TileSpacing','none','Padding','none')
+    each_stage.Layout.Tile = curr_stage+1;  % 明确放在主 layout 的第 2 个 tile
+
+    ax_psth(curr_stage) = nexttile(each_stage, 1);
+    hold on
+    for curr_line=1:length(raster_t{curr_stage})
+        plot(raster_t{curr_stage}{curr_line},smoothdata(psth_arm{curr_stage}{curr_line},2,'gaussian',100)','linewidth',2,'Color',colors{curr_line})
+    end
+    xlim([-1 1])
+    xline(0)
+    axis off
+
+    [raster_y,raster_x] =cellfun(@(x) find(x),raster_arm{curr_stage},'UniformOutput',false  );
+    for curr_line=1:length(raster_t{curr_stage})
+        ax(curr_line) = nexttile(each_stage);
+        plot(raster_t{curr_stage}{curr_line}(raster_x{curr_line}),raster_y{curr_line},...
+            'LineStyle', 'none',  'Marker', '.', 'Color', colors{curr_line},'MarkerSize',2);
+        xlim([-1 1])
+
+        xline(0);
+        axis off
+    end
+    linkaxes(ax, 'y');
+
+end
+linkaxes(ax_psth, 'y');
+
+saveas(gcf,[Path '\PSTH\' animal '_day_' num2str(curr_day) '_' modified_string  ], 'jpg');
+close all
+
+
+end
+end
