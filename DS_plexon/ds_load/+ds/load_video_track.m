@@ -1,6 +1,8 @@
 % load video track
 % 获取MP4文件
-mp4_file=dir(fullfile(Path, animal , rec_day, 'video_track' ,'*.mp4'));
+% mp4_file=dir(fullfile(Path, animal , rec_day, 'video_track' ,'*.mp4'));
+mp4_file=dir(fullfile(Path, animal , rec_day, 'video_track' ,'*.AVI'));
+
 % 创建一个 VideoReader 对象
 v = VideoReader(fullfile(mp4_file.folder, mp4_file.name));
 framerate=v.framerate;
@@ -46,11 +48,11 @@ recordedFrameCount=1;
 if ~exist(fullfile(Path, animal , rec_day, 'video_track','grab_picture.jpg'), 'file')
 % display_next_frame_on_scroll(fullfile(mp4_file.folder, mp4_file.name))
 
-% figure;
-% % 显示填充后的第一帧
-% imshow(paddedFrame);
-% hold on
-% scatter(X,Y)
+figure;
+% 显示填充后的第一帧
+imshow(paddedFrame);
+hold on
+scatter(X,Y)
 
 % 指定需要绘制的多边形区域数量
 numPolygons = 10; % 你可以根据需要改变此值
@@ -99,11 +101,19 @@ distances = sqrt(distances_X.^2 + distances_Y.^2);
 threshold=40;
 X_filter(distances > threshold)=NaN;
 Y_filter(distances > threshold)=NaN;
+
+
 idx_non_nan=~isnan(X_filter);
+
+
+
 % 排除速度低于0.3 
 speed = [0 ;sqrt(diff(X_filter).^2 + diff(X_filter).^2)];
 X_filter(speed<0.3)=NaN;
 Y_filter(speed<0.3)=NaN;
+
+
+
 
 
 

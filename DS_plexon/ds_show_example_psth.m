@@ -38,18 +38,28 @@ Y_by_trial=arrayfun(@(trial) Y_filter(inIntervals(:,trial)) ,1:size(inIntervals,
 X_by_trial_filled=cellfun(@(x)  interp1(find(~isnan(x)),x(~isnan(x)),(1:length(x))',"linear"),X_by_trial, 'UniformOutput', false);
 Y_by_trial_filled=cellfun(@(x)  interp1(find(~isnan(x)),x(~isnan(x)),(1:length(x))',"linear"),Y_by_trial, 'UniformOutput', false);
 
+X_by_trial_filled_2=cellfun(@(x)  x(~isnan(x)) ,X_by_trial_filled , 'UniformOutput', false)
+Y_by_trial_filled_2=cellfun(@(x)  x(~isnan(x)) ,Y_by_trial_filled , 'UniformOutput', false)
+position_time_by_trial_2=cellfun(@(x,y)  x(~isnan(y)) ,position_time_by_trial,X_by_trial_filled , 'UniformOutput', false);
+
+
 position_time_resort=cell2mat(cellfun(@(x)  [x;x(end)+1/framerate],position_time_by_trial,'UniformOutput',false)');
 X_resort=cell2mat(cellfun(@(x)  [x;nan],X_by_trial_filled,'UniformOutput',false)');
 Y_resort=cell2mat(cellfun(@(x)  [x;nan],Y_by_trial_filled,'UniformOutput',false)');
+
+figure;
+hold on
+cellfun(@(x,y) plot(x,y),X_by_trial_filled_2,Y_by_trial_filled_2,'UniformOutput',false)
 
 x_edges = min(X_resort-20):bin_size:max(X_resort+20);
 y_edges = min(Y_resort-20):bin_size:max(Y_resort+20);
 
 % 计算占用直方图
-occupancy_map = histcounts2(X_resort, Y_resort, x_edges, y_edges);
+occupancy_map = histcounts2(cell2mat(X_by_trial_filled_2'), cell2mat(Y_by_trial_filled_2'), x_edges, y_edges);
 frame_rate=30;
 occupancy_time = occupancy_map * (1 / frame_rate);
 occupancy_time_smooth=imgaussfilt(occupancy_time, smooth_sigma);
+% occupancy_time_smooth=occupancy_time;
 
 
 % figure;
@@ -60,83 +70,92 @@ occupancy_time_smooth=imgaussfilt(occupancy_time, smooth_sigma);
 % nexttile
 % imagesc(rate_map); clim([0 5])
 
-for curr_cell=1:length(spikes_all)
+for curr_cell=66:length(spikes_all)
 
     spike_times=spikes_all{curr_cell};
     % 获取每个发放事件对应的位置索引
-    spike_x = interp1(position_time_resort, X_resort, spike_times);
-    spike_y = interp1(position_time_resort, Y_resort, spike_times);
+    spike_x =cellfun(@(t,x)  interp1(t, x, spike_times(spike_times >= min(t) & spike_times <= max(t))),...
+        position_time_by_trial_2,X_by_trial_filled_2,'UniformOutput',false );
+    spike_y =cellfun(@(t,y)  interp1(t, y, spike_times(spike_times >= min(t) & spike_times <= max(t))),...
+        position_time_by_trial_2,Y_by_trial_filled_2,'UniformOutput',false );
+    spike_map = histcounts2( cell2mat(spike_x'), cell2mat(spike_y'), x_edges, y_edges);
 
-    spike_map = histcounts2(spike_x, spike_y, x_edges, y_edges);
+
+      
+    
     spike_map_smooth=imgaussfilt(spike_map, smooth_sigma);
+%     spike_map_smooth=spike_map;
 
-    rate_map = spike_map_smooth ./ (occupancy_time_smooth+eps);
-
+    rate_map = spike_map_smooth ./ (occupancy_time_smooth+1);
+%     rate_map=imgaussfilt(rate_map, smooth_sigma);
     if strcmp(animal,'DCA3-20')
         rate_map=rot90(rate_map,-1);
     end
 
-    % Step 6. 空间信息量 SI 计算
-p_ij = occupancy_time_smooth / sum(occupancy_time_smooth(:));
-lambda_ij = rate_map;
-lambda_bar = sum(p_ij(:) .* lambda_ij(:));
-info_map = p_ij .* (lambda_ij ./ lambda_bar) .* log2(lambda_ij ./ lambda_bar + eps);
-SI_real = nansum(info_map(:));
+
+    
+    figure;
+    nexttile
+    imagesc(occupancy_time_smooth)
+    nexttile
+    imagesc(spike_map_smooth)
+    nexttile
+    imagesc(rate_map)
+    % plot(spike_x,spike_y)
+
 
 
 shuffle_num = 1000;  % shuffle 次数
-min_field_area = 9;  % 连通区域中，位置野的最小像素数
+min_field_area = 16;  % 连通区域中，位置野的最小像素数
 alpha = 0.05;  % 显著性水平
-
-% Step 7. shuffle 检验 SI
-SI_shuffled = zeros(shuffle_num,1);
 total_time = position_time(end) - position_time(1);
+
+%% Step 8. shuffle 检验位置野阈值
+max_shuffled = zeros(shuffle_num,1);
+shuffled_ratemap=cell(shuffle_num,1);
 for i = 1:shuffle_num
     shift = rand * total_time;
     spike_times_shuffled = mod(spike_times + shift, total_time);
+    spike_x_shuffled = cellfun(@(t,x) interp1(t, x, spike_times_shuffled(spike_times_shuffled >= min(t) & spike_times_shuffled <= max(t))),...
+        position_time_by_trial_2,X_by_trial_filled_2,'UniformOutput',false );
+ spike_y_shuffled = cellfun(@(t,y) interp1(t, y, spike_times_shuffled(spike_times_shuffled >= min(t) & spike_times_shuffled <= max(t))),...
+        position_time_by_trial_2,Y_by_trial_filled_2,'UniformOutput',false );
     
-    spike_x_shuffled = interp1(position_time_resort, X_resort, spike_times_shuffled);
-    spike_y_shuffled = interp1(position_time_resort, Y_resort, spike_times_shuffled);
-
-
-    shuffled_spike_map = histcounts2(spike_x_shuffled, spike_y_shuffled, x_edges, y_edges);
-
+    shuffled_spike_map = histcounts2(cell2mat(spike_x_shuffled'), cell2mat(spike_y_shuffled'), x_edges, y_edges);
     shuffled_spike_smooth =  imgaussfilt(shuffled_spike_map, smooth_sigma);
-   
-    shuffled_ratemap = shuffled_spike_smooth ./ (occupancy_time_smooth + eps);
-    
-    lambda_ij = shuffled_ratemap;
-    lambda_bar = sum(p_ij(:) .* lambda_ij(:));
-    info_map = p_ij .* (lambda_ij ./ lambda_bar) .* log2(lambda_ij ./ lambda_bar + eps);
-    SI_shuffled(i) = nansum(info_map(:));
+    temp_shuffle = shuffled_spike_smooth ./ (occupancy_time_smooth + 1);
+    shuffled_ratemap{i}=  imgaussfilt(temp_shuffle, smooth_sigma);
+        shuffled_ratemap{i}= temp_shuffle;
+
+    % max_shuffled(i) = max(shuffled_ratemap(:));
 end
-
-% 判断是否为位置细胞
-p_value_SI = mean(SI_shuffled >= SI_real);
-is_place_cell = p_value_SI < alpha;
+% cat(3,shuffled_ratemap{:})
 
 
 
-
-
+firing_threshold = prctile(cat(3,shuffled_ratemap{:}), 99,3);
+if strcmp(animal,'DCA3-20')
+        firing_threshold=rot90(firing_threshold,-1);
+    end
     %place field
-    ratemap_all=rate_map;
-    threshold = mean(ratemap_all(ratemap_all > 0)) + 2 * std(ratemap_all(ratemap_all > 0));  % 只在非零区域计算
+    min_thres=3
+    binary_map = rate_map > firing_threshold & ...
+        rate_map>max([(mean(rate_map(rate_map>0))+ 1*std(rate_map(rate_map>0)));prctile(rate_map(rate_map>0),90); min_thres]);
 
-    % threshold = max(0.4 * max(ratemap_all(:)),4); % 可调
-    binary_map = ratemap_all > threshold;
+    
+%         binary_map = rate_map > firing_threshold;
+
     CC = bwconncomp(binary_map); % 识别所有连通区域
-    fields = regionprops(CC, ratemap_all, 'Area', 'PixelIdxList', 'MeanIntensity');
-    min_field_area = 4; % 至少 3x3 像素，例如
+    fields = regionprops(CC, rate_map, 'Area', 'PixelIdxList', 'MeanIntensity');
     valid_fields = fields([fields.Area] > min_field_area);
     % 合并所有位置野的 PixelIdxList（线性索引）
     all_idx = vertcat(valid_fields.PixelIdxList);  % [N x 1] 向量
     % 1. 构造 final_binary_mask：布尔矩阵
-    final_binary_mask = false(size(ratemap_all));
+    final_binary_mask = false(size(rate_map));
     final_binary_mask(all_idx) = true;
     % 2. 构造 place_field_mask：仅保留 ratemap_smooth 中 >0 的部分
-    place_field_mask = zeros(size(ratemap_all));
-    place_field_mask(all_idx) = ratemap_all(all_idx) > 0;  % 或保留原值
+    place_field_mask = zeros(size(rate_map));
+    place_field_mask(all_idx) = rate_map(all_idx) > 0;  % 或保留原值
     boundaries = bwboundaries(final_binary_mask);
 
 
