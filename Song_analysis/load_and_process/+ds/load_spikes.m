@@ -1,5 +1,5 @@
 % load spikes
-neuron_files=dir(fullfile(Path, animal , rec_day,'recording' ,'*.t'));
+neuron_files=dir(fullfile(Path, animal , rec_day,'tetrode_recording' ,'*.t'));
 spikes_all = arrayfun(@(f) readmclusttfile(fullfile(f.folder, f.name))'/10000, ...
     neuron_files, 'UniformOutput', false);
 spike_freq=cell2mat(cellfun(@(x) length(x)/x(end),spikes_all,'UniformOutput',false));

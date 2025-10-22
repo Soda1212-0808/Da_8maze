@@ -6,8 +6,8 @@ classdef locations
         %% Set common lab locations
 
         % NAS server location
-        server_path = '\\qnap-ap001.dpag.ox.ac.uk\APlab\';
-        server_data_path = fullfile(plab.locations.server_path,'Data');
+        server_path = 'D:\Da_Song\';
+        server_data_path = fullfile(ds.locations.server_path,'LocalData');
 
         % Ports for tcp servers and clients
         bonsai_port = 50001
@@ -48,7 +48,7 @@ classdef locations
         % e.g. P:\AP001\2023-03-21\Protocol_1301\timelite.mat
         %      P:\AP001\2023-03-21\Protocol_1301\widefield\svdSpatialComponents_blue.npy
 
-        function constructed_filename = filename(drive,animal,rec_day,rec_time,varargin)
+        function constructed_filename = filename(drive,animal,rec_day,varargin)
             % Construct server filename
             % constructed_filename = filename('server | local',animal,rec_day,rec_time,varargin)
 
@@ -65,14 +65,8 @@ classdef locations
                 rec_day = [];
             end
 
-            % Format recording time path
-            if exist('rec_time','var') && ~isempty(rec_time)
-                rec_time_path = sprintf('Recording_%s',rec_time);
-            else
-                rec_time_path = [];
-            end
-
-            filename_components = [{use_drive,animal,rec_day,rec_time_path},varargin];
+          
+            filename_components = [{use_drive,animal,rec_day},varargin];
             filename_components_filled = ...
                 filename_components(cellfun(@(x) ~isempty(x),filename_components));
 

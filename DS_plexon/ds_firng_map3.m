@@ -1,67 +1,43 @@
 clear all
+clc
 
-% Path = 'H:\Telc-CA3\each mice';
-% animals={'DCA3-22(LCA3-Telc)','DCA3-23(LCA3-Telc)','DCA3-24(RCA3-Telc)','DCA3-25(LCA3-Telc)',...
-%     'DCA3-26(LCA3-Telc)','DCA3-28(RCA3-Telc)','DCA3-29(RCA3-Telc)'};
+Path=ds.locations.server_data_path;
 
-Path = 'E:\SDdata\WT\each mice';    % 设置数据存放的文件夹路径
-animals={'DCA3-9','DCA3-10','DCA3-11','DCA3-12','DCA3-14','DCA3-17','DCA3-20'};
+load_parts=struct;
+load_parts.tetrode=true;
+load_parts.video_track=true;
 
-for curr_animal=7:length(animals)
-animal=animals{curr_animal};
-contents = dir(fullfile(Path ,animal));
-recording_days = {contents(([contents.isdir] & ~ismember({contents.name}, {'.', '..'}))).name};
+animal='DCA3-9';
+rec_day='2021-06-13';
 
-%选择文件
-curr_day=1;
-rec_day=recording_days{curr_day};
+ds.load_recoding
 
-% load spikes
-ds.load_spikes
 
-%
-ds.load_video_track
-ds.load_events
+time_intervals=cellfun(@(tb,tc) ...
+    arrayfun(@(i) position_timelite >= tb(i) & position_timelite <= tc(i), (1:size(tb,1))', ...
+    'UniformOutput', false),arm_times{1},arm_times{3},'UniformOutput',false);
 
+%% 计算占用直方图
 
 bin_size=10;
-position_time= position_timelite;
+frame_rate=30;
+inIntervals=cell2mat(cat(1, time_intervals{:})');
+[occupancy_time,x_edges,y_edges]=ds.occupancy(position_re_X,position_re_Y,'timeinterval',inIntervals,'bin_size',10,'fps',30);
 
-% sample period or choice period
-inIntervals_sample = position_time >= (data_event( :,3)-1)' & position_time <= (data_event(:,5)+1)';
-inIntervals_choice = position_time >= (data_event( :,7)-1)' & position_time <= (data_event(:,9)+1)';
-inIntervals=[inIntervals_sample inIntervals_choice];
 
-position_time_by_trial=arrayfun(@(trial) position_timelite(inIntervals(:,trial)) ,1:size(inIntervals,2), 'UniformOutput', false)
+
+
+
 X_by_trial=arrayfun(@(trial) position_re_X(inIntervals(:,trial)) ,1:size(inIntervals,2), 'UniformOutput', false)
 Y_by_trial=arrayfun(@(trial) position_re_Y(inIntervals(:,trial)) ,1:size(inIntervals,2), 'UniformOutput', false)
 X_by_trial_filled=cellfun(@(x)  interp1(find(~isnan(x)),x(~isnan(x)),(1:length(x))',"linear"),X_by_trial, 'UniformOutput', false)
 Y_by_trial_filled=cellfun(@(x)  interp1(find(~isnan(x)),x(~isnan(x)),(1:length(x))',"linear"),Y_by_trial, 'UniformOutput', false)
-
-
-position_time_resort=cell2mat(cellfun(@(x)  [x;x(end)+1/30],position_time_by_trial,'UniformOutput',false)');
 X_resort=cell2mat(cellfun(@(x)  [x;nan],X_by_trial_filled,'UniformOutput',false)');
 Y_resort=cell2mat(cellfun(@(x)  [x;nan],Y_by_trial_filled,'UniformOutput',false)');
-% figure;
-% plot(X_resort,Y_resort)
-
-frame_rate=30;
-% 定义网格的边界和分辨率
-x_edges = min(X_resort):bin_size:max(X_resort);
-y_edges = min(Y_resort):bin_size:max(Y_resort);
-
-% 计算占用直方图
-occupancy_map = histcounts2(X_resort, Y_resort, x_edges, y_edges);
-occupancy_time = occupancy_map * (1 / frame_rate);
 
 
-% figure;
-% nexttile
-% imagesc(occupancy_time)
-
-
-% figure('Position',[50 50 1600 800]);
-% colormap('jet')
+position_time_by_trial=arrayfun(@(trial) position_timelite(inIntervals(:,trial)) ,1:size(inIntervals,2), 'UniformOutput', false)
+position_time_resort=cell2mat(cellfun(@(x)  [x;x(end)+1/frame_rate],position_time_by_trial,'UniformOutput',false)');
 for curr_cell=1:length(spikes_all)
     spike_times=spikes_all{curr_cell};
     % 获取每个发放事件对应的位置索引
@@ -109,17 +85,5 @@ for curr_cell=1:length(spikes_all)
     title([modified_string ': ' formatted_value 'Hz'])
     drawnow
 end
-
-sgtitle([ animal '-day-' num2str(curr_day) ])
-
-saveas(gcf, fullfile(Path,[ animal '_day_' num2str(curr_day) 'rate_map.jpg']),'jpg')
-% close all
-
-
-
-
-
-end
-
 
 

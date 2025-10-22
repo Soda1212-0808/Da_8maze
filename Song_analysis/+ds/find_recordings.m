@@ -44,10 +44,7 @@ if ~exist('recording_day','var') || ~isempty(recording_day)
     end
 end
 
-% Ensure workflow and recording_day are cell arrays
-if ~iscell(workflow)
-    workflow = {workflow};
-end
+
 if ~isempty(recording_day) && ~iscell(recording_day)
     recording_day = {recording_day};
 end
@@ -67,8 +64,8 @@ end
 %% Find and package matching recordings
 
 struct_fieldnames = ...
-    {'animal','day','index','recording','workflow', ...
-    'mousecam','widefield','ephys'};
+    {'animal','day', ...
+    'video_track','tetrode','ca_2p'};
 recordings = cell2struct(cell(length(struct_fieldnames),0),struct_fieldnames);
 
 if ~isempty(recording_day)
@@ -78,43 +75,7 @@ if ~isempty(recording_day)
 
         curr_day_path = ds.locations.filename('local',animal,curr_day);
 
-        % Get recording folders within day
-        curr_recording_paths = dir(fullfile(curr_day_path,'Recording*'));
-
-        % Get bonsai workflows for each recording
-        recording_workflows = cell(size(curr_recording_paths));
-        for curr_path_idx = 1:length(curr_recording_paths)
-            curr_bonsai_path = fullfile( ...
-                curr_recording_paths(curr_path_idx).folder, ...
-                curr_recording_paths(curr_path_idx).name,'bonsai');
-
-            curr_bonsai_dir = dir(curr_bonsai_path);
-            curr_workflow_idx = [curr_bonsai_dir.isdir] & ...
-                ~contains({curr_bonsai_dir.name},'.');
-
-            if any(curr_workflow_idx)
-                curr_workflow = curr_bonsai_dir(curr_workflow_idx).name;
-                recording_workflows{curr_path_idx} = curr_workflow;
-            end
-        end
-
-        % Return all workflows (if unspecified), or specified workflows
-        if ~isempty(workflow)
-            % Regexp: workflow1$|workflow2$...
-            % ($ = string terminus, | looks for OR)
-            % (converts * into .* - allows for terminus)
-            workflow_regexp = strjoin(append(strrep(workflow,'*','.*'),'$'),'|');
-            use_recordings = ...
-                ~cellfun(@isempty,regexp(recording_workflows, ...
-                workflow_regexp,'forceCellOutput'));
-        else
-            use_recordings = true(size(curr_recording_paths));
-        end
-
-        % If no recordings, move to next day
-        if ~any(use_recordings)
-            continue
-        end
+    
 
         % Package info
         % (set index for day)
@@ -123,20 +84,15 @@ if ~isempty(recording_day)
         % (basic info)
         recordings(recording_idx).animal = animal;
         recordings(recording_idx).day = curr_day;
-        recordings(recording_idx).index = find(use_recordings);
-        recordings(recording_idx).recording = ...
-            strtok({curr_recording_paths(use_recordings).name},'Recording_');
-        recordings(recording_idx).workflow = recording_workflows(use_recordings);
-
+  
         % (recording modalities - note ephys is day-, not recording-specific)
-        recordings(recording_idx).mousecam = ...
-            cellfun(@(x) any(exist(fullfile(curr_day_path,x,'mousecam'),'dir')), ...
-            {curr_recording_paths(use_recordings).name});
-        recordings(recording_idx).widefield = ...
-            cellfun(@(x) any(exist(fullfile(curr_day_path,x,'widefield'),'dir')), ...
-            {curr_recording_paths(use_recordings).name});
-        recordings(recording_idx).ephys = ...
-            any(exist(fullfile(curr_day_path,'ephys'),'dir'));
+        recordings(recording_idx).video_track = ...
+           any(exist(fullfile(curr_day_path,'video_track'),'dir'))
+            
+        recordings(recording_idx).tetrode = ...
+               any(exist(fullfile(curr_day_path,'tetrode_recording'),'dir'))
+        recordings(recording_idx).ca_2p = ...
+            any(exist(fullfile(curr_day_path,'ca_2p'),'dir'));
     end
 
     %% If no recording days, error out

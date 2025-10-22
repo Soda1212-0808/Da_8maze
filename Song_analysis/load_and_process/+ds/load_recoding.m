@@ -26,7 +26,7 @@ end
 
 % If no day - choose from list of days
 if ~exist('rec_day','var') || isempty(rec_day)
-    animal_recordings = plab.find_recordings(animal);
+    animal_recordings = ds.find_recordings(animal);
     recording_days = {animal_recordings.day};
     day_idx = listdlg('PromptString','Select day:', ...
         'ListString',recording_days,'ListSize',[300,200], ...
@@ -63,7 +63,7 @@ if ~exist('load_parts','var')
     load_parts.tetrode = true;
 else
     % If only some things specified, don't load others
-    if ~isfield(load_parts,'mousecam')
+    if ~isfield(load_parts,'video_track')
         load_parts.video_track = false;
     end
     if ~isfield(load_parts,'ca_2p')
@@ -74,33 +74,30 @@ else
     end
 end
 
-% Get datetime of selected recording
-rec_datetime = datetime(strjoin({rec_day,rec_time}), ...
-                'InputFormat','yyyy-MM-dd HHmm');
+
 
 %% Load experiment components
 
 % Load timelite and associated inputs
-ap.load_timelite
+ds.load_events
 
-% Load Bonsai
-ap.load_bonsai
+
 
 % Load mousecam
 if load_parts.video_track
-    ap.load_mousecam
+    ds.load_video_track
 end
 
 % Load 2p
 if load_parts.ca_2p && ...
         exist(ds.locations.filename('local',animal,rec_day,'ca_2p_recording'),'dir')
-    ap.load_widefield
+    ap.load_ca_2p
 end
 
 % Load tetrode
 if load_parts.tetrode && ...
         exist(ds.locations.filename('local',animal,rec_day,'tetrode_recording'),'dir')
-    ap.load_ephys
+    ds.load_spikes
 end
 
 if verbose; disp('Finished.'); end;

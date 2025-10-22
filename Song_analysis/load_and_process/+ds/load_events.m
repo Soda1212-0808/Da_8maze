@@ -1,6 +1,8 @@
 % load events
 %处理event数据
-event_file=dir(fullfile(Path, animal ,rec_day,'behavior' ,'*data_m1.csv'));
+
+
+event_file=dir(fullfile(ds.locations.filename('local',animal,rec_day,'behavior') ,'event_times.csv'));
 
 data_event=csvread(fullfile(event_file.folder , event_file.name));
 

@@ -1,16 +1,12 @@
 % load video track
+
 % 获取MP4文件
 % mp4_file=dir(fullfile(Path, animal , rec_day, 'video_track' ,'*.mp4'));
-mp4_file=dir(fullfile(Path, animal , rec_day, 'video_track' ,'*.AVI'));
+mp4_file=dir(fullfile(ds.locations.filename('local',animal,rec_day,'video_track'),'*.AVI'));
 
 % 创建一个 VideoReader 对象
 v = VideoReader(fullfile(mp4_file.folder, mp4_file.name));
 framerate=v.framerate;
-
-
-% % 获取 event 文件
-% event_files=dir(fullfile(Path, animal , rec_day, 'behavior' ,'*.csv'));
-% data_event=readtable(fullfile(event_files.folder, event_files.name));
 
 % 获取DLC path 文件
 path_file=dir(fullfile(Path,animal, rec_day, 'video_track','*.csv'));
@@ -23,16 +19,6 @@ poss_threshold=0.8;
 X=table2array(data_path(:,2))+100;
 Y=table2array(data_path(:,3))+100;
 
-% figure
-% tiledlayout(1,2)
-% nexttile
-%  plot(X,Y)
-%  xlim([200 800]);
-%  ylim([0 600]);
-%  axis image off
-%  title('raw')
-
-% v.NumFrames
 % 读取第一帧
 firstFrame = readFrame(v);
 [rows, cols, channels] = size(firstFrame);
@@ -46,7 +32,6 @@ paddedFrame(101:100+rows, 101:100+cols, :) = firstFrame;
 recordedFrameCount=1;
 
 if ~exist(fullfile(Path, animal , rec_day, 'video_track','grab_picture.jpg'), 'file')
-% display_next_frame_on_scroll(fullfile(mp4_file.folder, mp4_file.name))
 
 figure;
 % 显示填充后的第一帧
@@ -61,8 +46,6 @@ for k = 1:numPolygons
     % 绘制多边形区域
     BW = roipoly;
     BW1{k}=BW;
-    % 将当前多边形区域添加到组合掩码中
-    %     BW_combined = BW_combined | BW;
 
     % 显示当前多边形区域的边界
     boundary = bwboundaries(BW);
@@ -107,20 +90,6 @@ idx_non_nan=~isnan(X_filter);
 
 
 
-% 排除速度低于0.3 
-speed = [0 ;sqrt(diff(X_filter).^2 + diff(X_filter).^2)];
-X_filter(speed<0.3)=NaN;
-Y_filter(speed<0.3)=NaN;
 
 
 
-
-
-
-% 
-% nexttile
-% plot(X_filter(~isnan(X_filter)),Y_filter(~isnan(Y_filter)))
-% xlim([200 800])
-% ylim([0 600])
-%  axis image off
-%  title('processed')
