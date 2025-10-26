@@ -6,12 +6,12 @@ min_field_area = 9;  % 连通区域中，位置野的最小像素数
 alpha = 0.05;  % 显著性水平
 
 %% Step 1. 构建位置 bin
-x_edges = min(position(:,1)) : bin_size : max(position(:,1));
-y_edges = min(position(:,2)) : bin_size : max(position(:,2));
+% x_edges = min(position(:,1)) : bin_size : max(position(:,1));
+% y_edges = min(position(:,2)) : bin_size : max(position(:,2));
 [xx, yy] = meshgrid(x_edges(1:end-1)+bin_size/2, y_edges(1:end-1)+bin_size/2);
 
 %% Step 2. spike 对齐位置
-spike_frame_idx = knnsearch(position_time, spike_times);
+spike_frame_idx = knnsearch(position_timelite, spike_times);
 spike_pos = position(spike_frame_idx, :);
 
 %% Step 3. occupancy map 和 spike map

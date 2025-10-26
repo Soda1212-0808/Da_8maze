@@ -38,7 +38,7 @@ inIntervals=cell2mat(cat(1, time_intervals{:})');
 
 
         modified_string = strrep(neuron_files(curr_cell).name(1:end-2), '_', '-');
-        figure('Name',modified_string,'Position',[50 50 300 800])
+        figure('Name',modified_string,'Position',[50 50 300 600])
         tiledlayout(5,1)
         nexttile
         % imagesc(x_edges, y_edges, result.rate_map_smooth);
@@ -47,15 +47,10 @@ inIntervals=cell2mat(cat(1, time_intervals{:})');
         axis image off;
         clim([0 nanmax(result{curr_cell}.rate_map_smooth(:))])
         colormap("jet")
-
-        if result{curr_cell}.info>0.1 & result{curr_cell}.p_value<0.05
-
         hold on
         for curr_field =1:length(result{curr_cell}.fields_valid)
             boundaries = bwboundaries(result{curr_cell}.fields_valid(curr_field).mask);
             plot(boundaries{1}(:,2), boundaries{1}(:,1), 'r', 'LineWidth', 1);
-        end
-
         end
 
         formatted_value = sprintf('%.1f', round(spike_freq(curr_cell),1));
