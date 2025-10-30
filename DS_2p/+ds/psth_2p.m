@@ -6,7 +6,7 @@ spike_time
 event_time
 event_type
  % Raster window options
-    opts.window (2,1) = [-2,2]
+    opts.window (2,1) = [-1,1]
     opts.bin_size = 0.04
 
     % PSTH post-processing options

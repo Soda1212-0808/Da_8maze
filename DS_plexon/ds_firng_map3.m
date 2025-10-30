@@ -5,8 +5,10 @@ Path=ds.locations.server_data_path;
 load_parts=struct;
 load_parts.tetrode=true;
 load_parts.video_track=true;
-animal='DCA3-9';
-rec_day='2021-06-13';
+animal='DCA3-20';
+% rec_day='2021-06-13';
+recordings=ds.find_recordings(animal);
+rec_day = recordings(1).day;
 ds.load_recoding
 
 time_intervals=cellfun(@(tb,tc) ...
@@ -18,13 +20,13 @@ time_intervals=cellfun(@(tb,tc) ...
 %% 计算占用直方图
 
 bin_size=10;
-smooth_bin=2
+smooth_bin=2;
 inIntervals=cell2mat(cat(1, time_intervals{:})');
     colors=num2cell(jet(6), 2);
 
     % [occupancy_time,x_edges,y_edges]=ds.occupancy(position_re_X,position_re_Y,'timeinterval',inIntervals,'bin_size',10,'fps',30);
     result=cell(length(spikes_all),1);
-    for curr_cell=1:length(spikes_all)
+    for curr_cell=71:length(spikes_all)
 
         spike_times=spikes_all{curr_cell};
 
@@ -48,7 +50,7 @@ inIntervals=cell2mat(cat(1, time_intervals{:})');
         clim([0 nanmax(result{curr_cell}.rate_map_smooth(:))])
         colormap("jet")
 
-        if result{curr_cell}.info>0.1 & result{curr_cell}.p_value<0.05
+%         if result{curr_cell}.info>0.1 & result{curr_cell}.p_value<0.05
 
         hold on
         for curr_field =1:length(result{curr_cell}.fields_valid)
@@ -56,7 +58,7 @@ inIntervals=cell2mat(cat(1, time_intervals{:})');
             plot(boundaries{1}(:,2), boundaries{1}(:,1), 'r', 'LineWidth', 1);
         end
 
-        end
+%         end
 
         formatted_value = sprintf('%.1f', round(spike_freq(curr_cell),1));
         title([modified_string ': ' formatted_value 'Hz'])
@@ -65,7 +67,7 @@ inIntervals=cell2mat(cat(1, time_intervals{:})');
         % set parameters
         smooth_window=100;
         raster_window = [-2,2];
-        % psth_bin_size = 0.01;
+         psth_bin_size = 0.01;
         % t_bins = raster_window(1):psth_bin_size:raster_window(2);
         % reponse_window=[-0.5 0.5];
 

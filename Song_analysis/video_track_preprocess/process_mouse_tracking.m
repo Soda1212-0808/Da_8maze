@@ -36,7 +36,9 @@ if ~isfolder(videoDir)
     error('Video track folder not found: %s', videoDir);
 end
 
-mp4_file = dir(fullfile(videoDir, '*.AVI'));
+% mp4_file = dir(fullfile(videoDir, '*.AVI'));
+mp4_file = dir(fullfile(videoDir, '*.mp4'));
+
 if isempty(mp4_file)
     error('No .AVI file found in %s', videoDir);
 end

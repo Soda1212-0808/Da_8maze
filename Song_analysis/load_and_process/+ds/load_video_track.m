@@ -1,7 +1,7 @@
 
 
 
-load(fullfile(ds.locations.filename('local',animal,rec_day,'video_track') ,'mice_position_re.mat'));
+load(fullfile(ds.locations.filename('server',animal,rec_day,'video_track') ,'mice_position_re.mat'));
 
 
 

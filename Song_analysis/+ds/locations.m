@@ -6,20 +6,22 @@ classdef locations
         %% Set common lab locations
 
         % NAS server location
-        server_path = 'D:\Da_Song\';
+%         server_path = 'D:\Da_Song\';
+         server_path = 'E:\SDdata\';
+
         server_data_path = fullfile(ds.locations.server_path,'LocalData');
 
-        % Ports for tcp servers and clients
-        bonsai_port = 50001
-        timelite_port = 50002
-        mousecam_port = 50003
-        widefield_port = 50004
-
-        % Local bonsai workflow folder
-        local_workflow_path = 'C:\Users\peterslab\Documents\GitHub\PetersLab_rigging\bonsai_workflows';
-
-        % Github paths
-        github_rigging = 'C:\Users\peterslab\Documents\GitHub\PetersLab_rigging';
+%         % Ports for tcp servers and clients
+%         bonsai_port = 50001
+%         timelite_port = 50002
+%         mousecam_port = 50003
+%         widefield_port = 50004
+% 
+%         % Local bonsai workflow folder
+%         local_workflow_path = 'C:\Users\peterslab\Documents\GitHub\PetersLab_rigging\bonsai_workflows';
+% 
+%         % Github paths
+%         github_rigging = 'C:\Users\peterslab\Documents\GitHub\PetersLab_rigging';
 
     end
 
@@ -54,9 +56,9 @@ classdef locations
 
             switch drive
                 case 'server'
-                    use_drive = plab.locations.server_data_path;
+                    use_drive = ds.locations.server_data_path;
                 case 'local'
-                    use_drive = plab.locations.local_data_path;
+                    use_drive = ds.locations.local_data_path;
                 otherwise
                     error('Filename drive option invalid: "%s"',drive)
             end

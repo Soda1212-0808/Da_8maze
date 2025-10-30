@@ -90,13 +90,13 @@ end
 
 % Load 2p
 if load_parts.ca_2p && ...
-        exist(ds.locations.filename('local',animal,rec_day,'ca_2p_recording'),'dir')
-    ap.load_ca_2p
+        exist(ds.locations.filename('server',animal,rec_day,'image_2p'),'dir')
+    ds.load_ca_2p
 end
 
 % Load tetrode
 if load_parts.tetrode && ...
-        exist(ds.locations.filename('local',animal,rec_day,'tetrode_recording'),'dir')
+        exist(ds.locations.filename('server',animal,rec_day,'tetrode_recording'),'dir')
     ds.load_spikes
 end
 

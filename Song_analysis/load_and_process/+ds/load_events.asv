@@ -31,7 +31,7 @@ arm_times=arrayfun(@(event) arrayfun(@(id1,id2) sort([ data_event(data_event(:,1
 
 % 如果是ca_2p,则event是帧模式
 
-allInts = all(mod(data_event(:),1) == 0);
+allInts = all(mod(event_time(:),1) == 0);
 if allInts
     event_file=dir(fullfile(ds.locations.filename('server',animal,rec_day) ,'*video_cell_match.mat'));
     load(fullfile(event_file.folder,event_file.name))
@@ -39,33 +39,49 @@ if allInts
 
 
 
-    A=cell2mat(animal_match(:,3))';
-    B=str2double(animal_match(:,1))';
+        A=cell2mat(animal_match(:,3))';
+        B=str2double(animal_match(:,1))';
 
-    idx = find(diff(A) < 0) + 1; % 找到下降点的索引
+        idx = find(diff(A) < 0) + 1; % 找到下降点的索引
 
-    if isempty(idx)
-        animal_match(:,8) = num2cell(A');
-        animal_match(:,7) = num2cell(B');
+        if isempty(idx)
+           animal_match(:,8) = num2cell(A');
+           animal_match(:,7) = num2cell(B');
 
-    else
-        % 计算累积调整量，排除初始的0
-        adjustments_A = cumsum([0, A(idx-1)]);
+        else
+            % 计算累积调整量，排除初始的0
+            adjustments_A = cumsum([0, A(idx-1)]);
 
-        % 利用广播机制创建调整矩阵，并计算总调整量
-        delta_A = max((1:numel(A) >= idx(:)) .* adjustments_A(2:end)', [],1);
-        % 应用调整
-        animal_match(:,8) = num2cell((A + delta_A)');
+            % 利用广播机制创建调整矩阵，并计算总调整量
+            delta_A = max((1:numel(A) >= idx(:)) .* adjustments_A(2:end)', [],1);
+            % 应用调整
+         animal_match(:,8) = num2cell((A + delta_A)');
 
-        adjustments_B = cumsum([0, B(idx-1)]);
-        % 利用广播机制创建调整矩阵，并计算总调整量
-        delta_B = max((1:numel(B) >= idx(:)) .* adjustments_B(2:end)',[], 1);
-        % 应用调整
-        animal_match(:,7) = num2cell((B + delta_B)');
-    end
+            adjustments_B = cumsum([0, B(idx-1)]);
+            % 利用广播机制创建调整矩阵，并计算总调整量
+            delta_B = max((1:numel(B) >= idx(:)) .* adjustments_B(2:end)',[], 1);
+            % 应用调整
+           animal_match(:,7) = num2cell((B + delta_B)');
+        end
+   
+
+
+
+
 
     [~,idxx]=  unique(double(cell2mat(animal_match(:, 8))), 'first') ;
-    data_event_to_2p =[data_event(:,1:2) ...
-        round(interp1(double(cell2mat(animal_match(idxx, 8))), cell2mat(animal_match(idxx, 7)),data_event(:,3:10), 'linear', 'extrap')) ];
+    all_data_frame = cellfun(@(A,B,C) [B(:,1:3) round(interp1(double(cell2mat(animal_match(idxx, 8))), cell2mat(animal_match(idxx, 7)),B(:,4:11), 'linear', 'extrap')) ],...
+        all_data_match, all_data_event,idxx,'UniformOutput',false);
+
+
+
+
+
+
+
+
+
+
+
 
 end

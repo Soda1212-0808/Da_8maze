@@ -52,7 +52,9 @@ end
 % If recording days empty: search all days on server
 if isempty(recording_day)
     % Get contents of animal path
-    animal_path = fullfile(ds.locations.local_data_path,animal);
+%     animal_path = fullfile(ds.locations.local_data_path,animal);
+        animal_path = fullfile(ds.locations.server_data_path,animal);
+
     animal_dir = dir(animal_path);
 
     % Find recording paths (matches day format and is folder)
@@ -73,7 +75,7 @@ if ~isempty(recording_day)
     for curr_day_idx = 1:length(recording_day)
         curr_day = recording_day{curr_day_idx};
 
-        curr_day_path = ds.locations.filename('local',animal,curr_day);
+        curr_day_path = ds.locations.filename('server',animal,curr_day);
 
     
 
@@ -87,12 +89,12 @@ if ~isempty(recording_day)
   
         % (recording modalities - note ephys is day-, not recording-specific)
         recordings(recording_idx).video_track = ...
-           any(exist(fullfile(curr_day_path,'video_track'),'dir'))
+           any(exist(fullfile(curr_day_path,'video_track'),'dir'));
             
         recordings(recording_idx).tetrode = ...
-               any(exist(fullfile(curr_day_path,'tetrode_recording'),'dir'))
+               any(exist(fullfile(curr_day_path,'tetrode_recording'),'dir'));
         recordings(recording_idx).ca_2p = ...
-            any(exist(fullfile(curr_day_path,'ca_2p'),'dir'));
+            any(exist(fullfile(curr_day_path,'image_2p'),'dir'));
     end
 
     %% If no recording days, error out

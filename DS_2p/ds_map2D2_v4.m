@@ -1,6 +1,6 @@
 clearvars
 % 定义包含CSV文件的文件夹路径
-Path = 'G:\CA3_rawdata\CA3_2p\data';    % 设置数据存放的文件夹路径
+Path = 'G:\CA3_rawdata_2p';    % 设置数据存放的文件夹路径
 % animals={'1464'};
 animals={'1646','1306','1307','1309','1311','1312','1974','1976'};
 
@@ -170,6 +170,7 @@ for curr_animal=3:length(animals)
     end
 
     [~,idxx]=cellfun(@(A)   unique(double(cell2mat(A.animal_match(:, 8))), 'first')  ,all_data_match,'UniformOutput',false);
+    
     all_data_frame = cellfun(@(A,B,C) [B(:,1:3) round(interp1(double(cell2mat(A.animal_match(C, 8))), cell2mat(A.animal_match(C, 7)),B(:,4:11), 'linear', 'extrap')) ],...
         all_data_match, all_data_event,idxx,'UniformOutput',false);
 

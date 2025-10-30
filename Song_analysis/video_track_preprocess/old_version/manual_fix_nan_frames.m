@@ -1,4 +1,4 @@
-function [position_re_X, position_re_Y] = manual_fix_nan_frames2(videoFile, x, y, position_timelite, varargin)
+function [position_re_X, position_re_Y] = manual_fix_nan_frames(videoFile, x, y, position_timelite, varargin)
 % manual_fix_nan_frames8
 % 手动修正视频中检测失败（NaN）的帧坐标（必含时间轴，自动保存带 timelist）
 %
@@ -15,22 +15,6 @@ function [position_re_X, position_re_Y] = manual_fix_nan_frames2(videoFile, x, y
 %
 % 返回:
 %   position_re_X, position_re_Y - 修正后的坐标
-%
-% 说明:
-%   - intervals 有两种可能的语义:
-%       时间段（秒）： [t_start, t_end]
-%       帧段（帧索引）： [f_start, f_end]，帧索引从 1 开始到 nFrames
-%   - 若 intervals_mode = 'auto'，将按下列规则判别：
-%       * 若 intervals 中所有元素均为整数且都位于 [1, nFrames]，则认为是帧段（frame）
-%       * 否则认为是时间段（time）
-%
-% 示例:
-%   [x2,y2] = manual_fix_nan_frames8('video.mp4', x, y, tlist);
-%   [x2,y2] = manual_fix_nan_frames8('video.mp4', x, y, tlist, ...
-%       'intervals', [5 10; 20 25], 'autosave', true, 'savepath', 'progress.mat');
-%   % 用帧号区间（强制 frame）
-%   [x2,y2] = manual_fix_nan_frames8('video.mp4', x, y, tlist, ...
-%       'intervals', [100 200; 500 550], 'intervals_mode', 'frame');
 
 % ---------------- 参数解析 ----------------
 p = inputParser;
@@ -73,16 +57,16 @@ if isempty(origNanAll)
 end
 
 % ---------- 处理 intervals（支持 time 或 frame，两种模式，默认 auto） ----------
-origNanIdx = origNanAll; % 默认全部 NaN
+% 为了让回调函数访问，modeUsed 与 intervalStarts 提升至此作用域
+modeUsed = '';
+intervalStarts = []; % 将保存每个 interval 的首帧索引（整数帧号）
+origNanIdx = origNanAll; % 默认：所有 NaN
 numNaNFiltered = numel(origNanIdx);
 
 if ~isempty(intervals)
-    % 确保 intervals 是 m x 2
     intervals = reshape(intervals, [], 2);
-    % 判别模式
     modeUsed = intervals_mode;
     if strcmp(modeUsed, 'auto')
-        % 自动检测：如果 intervals 所有元素都是整数并且都在 [1, nFrames]，则当作帧索引
         allInts = all(mod(intervals(:),1) == 0);
         allWithinFrames = all(intervals(:) >= 1 & intervals(:) <= nFrames);
         if allInts && allWithinFrames
@@ -94,7 +78,6 @@ if ~isempty(intervals)
 
     switch modeUsed
         case 'time'
-            % 原来基于时间的筛选
             inInterval = false(nFrames,1);
             for k = 1:size(intervals,1)
                 t1 = min(intervals(k,:));
@@ -103,20 +86,36 @@ if ~isempty(intervals)
             end
             origNanIdx = origNanAll(inInterval(origNanAll));
             fprintf('Intervals interpreted as TIME ranges (s).\n');
+
+            % 计算每个 interval 的首帧（第一个 times >= t1）
+            for k = 1:size(intervals,1)
+                t1 = min(intervals(k,:));
+                % 找到第一个满足 times >= t1 的帧索引
+                idx = find(times >= t1, 1, 'first');
+                if ~isempty(idx)
+                    intervalStarts(end+1,1) = idx; %#ok<AGROW>
+                end
+            end
+
         case 'frame'
-            % 将 intervals 视作帧索引区间（可能是浮点数，但会 round）
+            % 视作帧索引区间（round 并剪裁）
             inInterval = false(nFrames,1);
             for k = 1:size(intervals,1)
-                % 四舍五入并限制在 [1, nFrames]
                 f1 = max(1, min(nFrames, round(min(intervals(k,:)))));
                 f2 = max(1, min(nFrames, round(max(intervals(k,:)))));
                 inInterval(f1:f2) = true;
+                intervalStarts(end+1,1) = f1; %#ok<AGROW>
             end
             origNanIdx = origNanAll(inInterval(origNanAll));
             fprintf('Intervals interpreted as FRAME index ranges.\n');
+
         otherwise
             error('Unknown intervals_mode: %s', intervals_mode);
     end
+
+    % 去重并排序 intervalStarts，确保在 1..nFrames
+    intervalStarts = unique(intervalStarts(:)');
+    intervalStarts = intervalStarts(intervalStarts >= 1 & intervalStarts <= nFrames);
     numNaNFiltered = numel(origNanIdx);
 end
 
@@ -201,9 +200,31 @@ return
     function keyPressCallback(~,event)
         switch event.Key
             case 'uparrow'
-                if currentFrame>1, displayFrame(currentFrame-1); end
+                % 若没有任何 NaN（origNanAll 为空）且有 intervalStarts，则在 intervalStarts 之间跳转（上一个）
+                if isempty(origNanAll) && ~isempty(intervalStarts)
+                    prevIdxs = intervalStarts(intervalStarts < currentFrame);
+                    if ~isempty(prevIdxs)
+                        displayFrame(prevIdxs(end));
+                    else
+                        % 若无更早的 interval 开始帧，则跳到最后一个 interval 开始（循环）
+                        displayFrame(intervalStarts(end));
+                    end
+                else
+                    if currentFrame>1, displayFrame(currentFrame-1); end
+                end
             case 'downarrow'
-                if currentFrame<nFrames, displayFrame(currentFrame+1); end
+                % 若没有任何 NaN（origNanAll 为空）且有 intervalStarts，则在 intervalStarts 之间跳转（下一个）
+                if isempty(origNanAll) && ~isempty(intervalStarts)
+                    nextIdxs = intervalStarts(intervalStarts > currentFrame);
+                    if ~isempty(nextIdxs)
+                        displayFrame(nextIdxs(1));
+                    else
+                        % 若无更晚的 interval 开始帧，则跳到第一个 interval 开始（循环）
+                        displayFrame(intervalStarts(1));
+                    end
+                else
+                    if currentFrame<nFrames, displayFrame(currentFrame+1); end
+                end
             case 'leftarrow'
                 leftIdx = origNanIdx(origNanIdx<currentFrame);
                 if ~isempty(leftIdx), displayFrame(max(leftIdx)); end
