@@ -1,4 +1,4 @@
-function results = detect_place_cell(positionX, positionY, position_timelite, spike_times, inIntervals, bin_size, varargin)
+function results = detect_place_cell_v2(positionX, positionY, position_timelite, spike_times, inIntervals, bin_size, varargin)
 % DETECT_PLACE_CELL  detect place fields and test whether a neuron is a place cell.
 % Now supports both electrophysiology spikes and deconvolved 2P calcium activity.
 %

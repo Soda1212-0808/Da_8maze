@@ -2,10 +2,10 @@
 clear all
 close all
 
-animal = 'CA3-1307';
+animal = 'DCA3-9';
 % rec_day = '2021-06-13';
 recordings=ds.find_recordings(animal);
-rec_day = recordings(1).day;
+rec_day = recordings(2).day;
 
 Path = ds.locations.server_data_path;
 

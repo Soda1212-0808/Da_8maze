@@ -5,7 +5,13 @@ Path=ds.locations.server_data_path;
 load_parts=struct;
 load_parts.tetrode=true;
 load_parts.video_track=true;
-animal='DCA3-20';
+
+animals={'DCA3-9','DCA3-10','DCA3-11','DCA3-12','DCA3-14','DCA3-17','DCA3-20'};
+result_all=cell(length(animals),1);
+
+for curr_animal=7:length(animals)
+
+animal=animals{curr_animal}
 % rec_day='2021-06-13';
 recordings=ds.find_recordings(animal);
 rec_day = recordings(1).day;
@@ -17,68 +23,73 @@ time_intervals=cellfun(@(tb,tc) ...
 
 
 
+
+
 %% 计算占用直方图
 
 bin_size=10;
 smooth_bin=2;
 inIntervals=cell2mat(cat(1, time_intervals{:})');
-    colors=num2cell(jet(6), 2);
+colors=num2cell(jet(6), 2);
 
-    % [occupancy_time,x_edges,y_edges]=ds.occupancy(position_re_X,position_re_Y,'timeinterval',inIntervals,'bin_size',10,'fps',30);
-    result=cell(length(spikes_all),1);
-    for curr_cell=71:length(spikes_all)
+% [occupancy_time,x_edges,y_edges]=ds.occupancy(position_re_X,position_re_Y,'timeinterval',inIntervals,'bin_size',10,'fps',30);
+result=cell(length(spikes_all),1);
+for curr_cell=18:length(spikes_all)
+   
+    modified_string = strrep(neuron_files(curr_cell).name(1:end-2), '_', '-');
 
-        spike_times=spikes_all{curr_cell};
+fprintf('spike_name: %s No. %s \n', modified_string,num2str(curr_cell));
 
-        % [rate_map,  x_edges, y_edges] = ...
-        %     ds.compute_rate_map_from_position(position_re_X, position_re_Y, position_timelite, spike_times, inIntervals,bin_size,...
-        %     'smooth',true, 'smooth_bin', smooth_bin,'bin_pass',5);
+    spike_times=spikes_all{curr_cell};
 
-        result{curr_cell}=ds.detect_place_cell(position_re_X, position_re_Y, position_timelite, spike_times, inIntervals,bin_size,...
-            'smooth', true, 'smooth_bin', 2, 'bin_pass', 5, 'nShuffles', 500, ...
-            'info_thresh', 0.15, 'p_thresh', 0.05, 'min_field_bins', 16, 'peak_rate_min', 1);
+    % [rate_map,  x_edges, y_edges] = ...
+    %     ds.compute_rate_map_from_position(position_re_X, position_re_Y, position_timelite, spike_times, inIntervals,bin_size,...
+    %     'smooth',true, 'smooth_bin', smooth_bin,'bin_pass',5);
 
+    result{curr_cell}=ds.detect_place_cell_v4(position_re_X, position_re_Y, position_timelite, spike_times, inIntervals,bin_size,...
+        'smooth', true, 'smooth_bin', 2, 'bin_pass', 5, 'nShuffles', 500, ...
+        'info_thresh', 0.15, 'p_thresh', 0.05, 'min_field_bins', 16, 'peak_rate_min', 1);
 
-        modified_string = strrep(neuron_files(curr_cell).name(1:end-2), '_', '-');
-        figure('Name',modified_string,'Position',[50 50 300 800])
-        tiledlayout(5,1)
-        nexttile
-        % imagesc(x_edges, y_edges, result.rate_map_smooth);
-        imagesc( result{curr_cell}.rate_map_smooth);
+if spike_freq(curr_cell)<10
+    figure('Name',modified_string,'Position',[50 50 300 800])
+    tiledlayout(5,1)
+    nexttile
+    % imagesc(x_edges, y_edges, result.rate_map_smooth);
+    imagesc( result{curr_cell}.rate_map_smooth);
 
-        axis image off;
-        clim([0 nanmax(result{curr_cell}.rate_map_smooth(:))])
-        colormap("jet")
+    axis image off;
+    clim([0 nanmax(result{curr_cell}.rate_map_smooth(:))])
+    colormap("jet")
 
-%         if result{curr_cell}.info>0.1 & result{curr_cell}.p_value<0.05
+%          if result{curr_cell}.info>0.1 & result{curr_cell}.p_value<0.05
 
-        hold on
-        for curr_field =1:length(result{curr_cell}.fields_valid)
-            boundaries = bwboundaries(result{curr_cell}.fields_valid(curr_field).mask);
-            plot(boundaries{1}(:,2), boundaries{1}(:,1), 'r', 'LineWidth', 1);
-        end
+    hold on
+    for curr_field =1:length(result{curr_cell}.fields_valid)
+        boundaries = bwboundaries(result{curr_cell}.fields_valid(curr_field).mask);
+        plot(boundaries{1}(:,2), boundaries{1}(:,1), 'r', 'LineWidth', 1);
+    end
 
 %         end
 
-        formatted_value = sprintf('%.1f', round(spike_freq(curr_cell),1));
-        title([modified_string ': ' formatted_value 'Hz'])
+    formatted_value = sprintf('%.1f', round(spike_freq(curr_cell),1));
+    title([modified_string ': ' formatted_value 'Hz'])
 
-        % psth
-        % set parameters
-        smooth_window=100;
-        raster_window = [-2,2];
-         psth_bin_size = 0.01;
-        % t_bins = raster_window(1):psth_bin_size:raster_window(2);
-        % reponse_window=[-0.5 0.5];
+    % psth
+    % set parameters
+    smooth_window=100;
+    raster_window = [-2,2];
+    psth_bin_size = 0.01;
+    % t_bins = raster_window(1):psth_bin_size:raster_window(2);
+    % reponse_window=[-0.5 0.5];
 
-        [use_spikes,spike_groups] = ismember(spike_templates,curr_cell);
-        [psth_smooth,raster,raster_t_stim]=cellfun(@(y)...
-            cellfun(@(x) ap.psth(spike_times_timelite(use_spikes),x,spike_groups(use_spikes),'smoothing',smooth_window,...
-            'window',raster_window,'bin_size',psth_bin_size)...
-            ,y,'UniformOutput',false),arm_times,'UniformOutput',false);
+    [use_spikes,spike_groups] = ismember(spike_templates,curr_cell);
+    [psth_smooth,raster,raster_t_stim]=cellfun(@(y)...
+        cellfun(@(x) ap.psth(spike_times_timelite(use_spikes),x,spike_groups(use_spikes),'smoothing',smooth_window,...
+        'window',raster_window,'bin_size',psth_bin_size)...
+        ,y,'UniformOutput',false),arm_times,'UniformOutput',false);
 
 
-        for curr_stage=1:2
+    for curr_stage=1:2
         nexttile
         hold on
         cellfun(@(x,color) plot(raster_t_stim{1}{1},smoothdata(x,2,'gaussian',10)','linewidth',2,'Color',color),psth_smooth{curr_stage},colors,'UniformOutput',false)
@@ -97,15 +108,15 @@ inIntervals=cell2mat(cat(1, time_intervals{:})');
         end
         axis off
 
-        end
-
-        drawnow
-
     end
 
+    drawnow
+%     close all
+end
+end
 
 
-    result_all=vertcat(result{:});
+result_all{curr_animal}=vertcat(result{:});
+end
 
-    find(cell2mat({result_all.info})>0&cell2mat({result_all.p_value})<0.05)
-
+vertcat(result_all{:})

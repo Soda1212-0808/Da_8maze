@@ -2,7 +2,7 @@
 %处理event数据
 
 
-event_file=dir(fullfile(ds.locations.filename('server',animal,rec_day,'behavior') ,'event_times.csv'));
+event_file=dir(fullfile(ds.locations.filename('server',animal,rec_day,'behavior') ,'*.csv'));
 
 data_event=csvread(fullfile(event_file.folder , event_file.name));
 
